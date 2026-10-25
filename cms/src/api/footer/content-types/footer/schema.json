@@ -1,0 +1,38 @@
+{
+  "kind": "singleType",
+  "collectionName": "footers",
+  "info": {
+    "singularName": "footer",
+    "pluralName": "footers",
+    "displayName": "Footer Navigation",
+    "description": "Footer single type schema managing tagline, social links, navigation columns, about section, and copyright text"
+  },
+  "options": {
+    "draftAndPublish": true
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "taglineText": {
+      "type": "text"
+    },
+    "socialLinks": {
+      "type": "component",
+      "repeatable": true,
+      "component": "navigation.social-link"
+    },
+    "columns": {
+      "type": "component",
+      "repeatable": true,
+      "component": "navigation.footer-column"
+    },
+    "aboutTitle": {
+      "type": "string"
+    },
+    "aboutDescription": {
+      "type": "text"
+    },
+    "copyrightText": {
+      "type": "string"
+    }
+  }
+}

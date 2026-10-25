@@ -1,0 +1,27 @@
+{
+  "collectionName": "components_navigation_nav_sections",
+  "info": {
+    "displayName": "Nav Section / Sub Category",
+    "icon": "layer",
+    "description": "Sub-category section containing links"
+  },
+  "options": {},
+  "attributes": {
+    "title": {
+      "type": "string",
+      "required": true
+    },
+    "url": {
+      "type": "string"
+    },
+    "isExternal": {
+      "type": "boolean",
+      "default": false
+    },
+    "items": {
+      "type": "component",
+      "repeatable": true,
+      "component": "navigation.link-item"
+    }
+  }
+}

@@ -1,0 +1,51 @@
+{
+  "kind": "singleType",
+  "collectionName": "headers",
+  "info": {
+    "singularName": "header",
+    "pluralName": "headers",
+    "displayName": "Header / Navigation Bar",
+    "description": "Header navigation bar schema for Badmos Fashion"
+  },
+  "options": {
+    "draftAndPublish": true
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "logoText": {
+      "type": "string",
+      "default": "BADMOS"
+    },
+    "logoLink": {
+      "type": "string",
+      "default": "/"
+    },
+    "logoImage": {
+      "type": "media",
+      "multiple": false,
+      "required": false,
+      "allowedTypes": [
+        "images"
+      ]
+    },
+    "leftNavTabs": {
+      "type": "component",
+      "repeatable": true,
+      "component": "navigation.nav-tab"
+    },
+    "showCartButton": {
+      "type": "boolean",
+      "default": true
+    },
+    "userMenu": {
+      "type": "component",
+      "repeatable": false,
+      "component": "navigation.user-menu"
+    },
+    "topBar": {
+      "type": "component",
+      "repeatable": false,
+      "component": "navigation.header-top-bar"
+    }
+  }
+}

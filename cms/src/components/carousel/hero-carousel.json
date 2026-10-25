@@ -1,0 +1,40 @@
+{
+  "collectionName": "components_carousel_hero_carousels",
+  "info": {
+    "displayName": "Hero Carousel",
+    "icon": "slideshow",
+    "description": "Hero Carousel component with single list of slides and presentation controls"
+  },
+  "options": {},
+  "attributes": {
+    "slides": {
+      "type": "component",
+      "repeatable": true,
+      "component": "carousel.hero-asset"
+    },
+    "autoPlay": {
+      "type": "boolean",
+      "default": true
+    },
+    "autoPlayInterval": {
+      "type": "integer",
+      "default": 5000
+    },
+    "transitionDuration": {
+      "type": "integer",
+      "default": 1000
+    },
+    "showDots": {
+      "type": "boolean",
+      "default": true
+    },
+    "showArrows": {
+      "type": "boolean",
+      "default": true
+    },
+    "pauseOnHover": {
+      "type": "boolean",
+      "default": true
+    }
+  }
+}

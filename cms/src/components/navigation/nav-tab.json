@@ -1,0 +1,35 @@
+{
+  "collectionName": "components_navigation_nav_tabs",
+  "info": {
+    "displayName": "Nav Tab / Header Dropdown",
+    "icon": "bulletList",
+    "description": "Navigation tab in header bar, can be dropdown or direct link"
+  },
+  "options": {},
+  "attributes": {
+    "tabName": {
+      "type": "string",
+      "required": true
+    },
+    "type": {
+      "type": "enumeration",
+      "enum": [
+        "dropdown",
+        "direct_link"
+      ],
+      "default": "dropdown"
+    },
+    "url": {
+      "type": "string"
+    },
+    "isExternal": {
+      "type": "boolean",
+      "default": false
+    },
+    "categories": {
+      "type": "component",
+      "repeatable": true,
+      "component": "navigation.nav-category"
+    }
+  }
+}

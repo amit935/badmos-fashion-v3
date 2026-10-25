@@ -1,0 +1,26 @@
+{
+  "collectionName": "components_navigation_link_items",
+  "info": {
+    "displayName": "Link Item",
+    "icon": "link",
+    "description": "Navigation link item with title and URL"
+  },
+  "options": {},
+  "attributes": {
+    "title": {
+      "type": "string",
+      "required": true
+    },
+    "url": {
+      "type": "string",
+      "required": true
+    },
+    "isExternal": {
+      "type": "boolean",
+      "default": false
+    },
+    "badgeText": {
+      "type": "string"
+    }
+  }
+}

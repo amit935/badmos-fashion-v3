@@ -1,0 +1,26 @@
+{
+  "collectionName": "components_carousel_hero_collections",
+  "info": {
+    "displayName": "Hero Collection",
+    "icon": "folder",
+    "description": "Collection of hero image assets for specific device breakpoint slugs"
+  },
+  "options": {},
+  "attributes": {
+    "slug": {
+      "type": "enumeration",
+      "enum": [
+        "1920x1080",
+        "1080x1280",
+        "1080x2048"
+      ],
+      "required": true,
+      "default": "1920x1080"
+    },
+    "assets": {
+      "type": "component",
+      "repeatable": true,
+      "component": "carousel.hero-asset"
+    }
+  }
+}

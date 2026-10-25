@@ -1,0 +1,25 @@
+{
+  "collectionName": "components_sections_product_list_sections",
+  "info": {
+    "displayName": "Product List Section",
+    "icon": "shopping-cart",
+    "description": "Vendure Product List component storing slug pointers via interactive admin selector"
+  },
+  "options": {},
+  "attributes": {
+    "title": {
+      "type": "string",
+      "default": "Featured Products"
+    },
+    "caption": {
+      "type": "string"
+    },
+    "productSlugs": {
+      "type": "customField",
+      "customField": "global::vendure-product-selector"
+    },
+    "categorySlugs": {
+      "type": "json"
+    }
+  }
+}

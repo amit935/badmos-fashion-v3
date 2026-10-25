@@ -1,0 +1,36 @@
+{
+  "collectionName": "components_navigation_user_menus",
+  "info": {
+    "displayName": "User Account Menu",
+    "icon": "user",
+    "description": "User profile menu dropdown settings and navigation links"
+  },
+  "options": {},
+  "attributes": {
+    "showUserDropdown": {
+      "type": "boolean",
+      "default": true
+    },
+    "guestTitle": {
+      "type": "string",
+      "default": "Welcome to Badmos Fashion"
+    },
+    "joinClanButtonLabel": {
+      "type": "string",
+      "default": "Join The Clan"
+    },
+    "joinClanButtonUrl": {
+      "type": "string",
+      "default": "/login"
+    },
+    "signOutLabel": {
+      "type": "string",
+      "default": "Sign Out"
+    },
+    "userLinks": {
+      "type": "component",
+      "repeatable": true,
+      "component": "navigation.link-item"
+    }
+  }
+}

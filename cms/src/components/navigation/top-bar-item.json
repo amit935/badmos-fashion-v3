@@ -1,0 +1,21 @@
+{
+  "collectionName": "components_navigation_top_bar_items",
+  "info": {
+    "displayName": "Top Bar Item",
+    "icon": "megaphone",
+    "description": "Individual announcement entry for header top bar"
+  },
+  "options": {},
+  "attributes": {
+    "announcementText": {
+      "type": "string",
+      "required": true
+    },
+    "linkText": {
+      "type": "string"
+    },
+    "linkUrl": {
+      "type": "string"
+    }
+  }
+}

@@ -1,0 +1,20 @@
+{{> header title="Your Login Code" }}
+
+<mj-section>
+  <mj-column>
+    <mj-text font-size="16px" line-height="1.6">
+      <p>Hi there,</p>
+      <p>You requested a login code for <strong>{{ email }}</strong>.</p>
+      <p>Your one-time code is:</p>
+    </mj-text>
+    <mj-text font-size="36px" font-weight="bold" align="center" padding="20px 0" letter-spacing="8px">
+      {{ otpCode }}
+    </mj-text>
+    <mj-text font-size="14px" color="#666666" line-height="1.6">
+      <p>This code will expire in 10 minutes.</p>
+      <p>If you did not request this code, you can safely ignore this email.</p>
+    </mj-text>
+  </mj-column>
+</mj-section>
+
+{{> footer }}

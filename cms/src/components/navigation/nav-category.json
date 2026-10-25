@@ -1,0 +1,27 @@
+{
+  "collectionName": "components_navigation_nav_categories",
+  "info": {
+    "displayName": "Nav Category / Main Group",
+    "icon": "folder",
+    "description": "Main category containing sub-category sections"
+  },
+  "options": {},
+  "attributes": {
+    "title": {
+      "type": "string",
+      "required": true
+    },
+    "url": {
+      "type": "string"
+    },
+    "isExternal": {
+      "type": "boolean",
+      "default": false
+    },
+    "sections": {
+      "type": "component",
+      "repeatable": true,
+      "component": "navigation.nav-section"
+    }
+  }
+}

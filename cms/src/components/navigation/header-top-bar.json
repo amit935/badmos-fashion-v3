@@ -1,0 +1,24 @@
+{
+  "collectionName": "components_navigation_header_top_bars",
+  "info": {
+    "displayName": "Header Top Bar",
+    "icon": "megaphone",
+    "description": "Header announcement top bar with auto-scrolling announcements"
+  },
+  "options": {},
+  "attributes": {
+    "enabled": {
+      "type": "boolean",
+      "default": true
+    },
+    "autoScrollInterval": {
+      "type": "integer",
+      "default": 4
+    },
+    "announcements": {
+      "type": "component",
+      "repeatable": true,
+      "component": "navigation.top-bar-item"
+    }
+  }
+}

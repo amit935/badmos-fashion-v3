@@ -1,0 +1,42 @@
+{
+  "collectionName": "components_carousel_hero_assets",
+  "info": {
+    "displayName": "Hero Asset",
+    "icon": "picture",
+    "description": "Individual hero image slide with optional title, subtitle, CTA button, link, and mobile image override"
+  },
+  "options": {},
+  "attributes": {
+    "preview": {
+      "type": "media",
+      "multiple": false,
+      "required": false,
+      "allowedTypes": [
+        "images"
+      ]
+    },
+    "mobileImage": {
+      "type": "media",
+      "multiple": false,
+      "required": false,
+      "allowedTypes": [
+        "images"
+      ]
+    },
+    "alt": {
+      "type": "string"
+    },
+    "title": {
+      "type": "string"
+    },
+    "subtitle": {
+      "type": "string"
+    },
+    "buttonText": {
+      "type": "string"
+    },
+    "link": {
+      "type": "string"
+    }
+  }
+}
