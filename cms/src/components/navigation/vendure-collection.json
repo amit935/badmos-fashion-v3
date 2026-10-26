@@ -1,0 +1,12 @@
+{
+  "collectionName": "components_navigation_vendure_collections",
+  "info": { "displayName": "Vendure Collection", "icon": "link" },
+  "options": {},
+  "attributes": {
+    "slug": {
+      "type": "string",
+      "required": true,
+      "regex": "^[a-z0-9]+(-[a-z0-9]+)*$"
+    }
+  }
+}

@@ -1,92 +1,13 @@
 <script setup>
-import { useQueryCollection } from '~/composables/useQueryCollection.js'
-import { useStrapiHeader } from '~/composables/useStrapiHeader.js'
-import { ref, onMounted, computed } from 'vue';
+import { computed } from 'vue';
+import { useNavTabs } from '~/composables/useNavTabs.js';
 
 const props = defineProps({
-  headerData: {
-    type: Object,
-    default: null
-  }
-})
-
-const { fetchCollection } = useQueryCollection()
-const { fetchHeader } = useStrapiHeader()
-
-const fetchedHeaderData = ref(null)
-const shopByCategory = ref({ name: 'Shop By Categories', children: [] });
-const shopByCollection = ref({ name: 'Shop By Collections', children: [] });
-
-const activeHeaderData = computed(() => {
-  return props.headerData || fetchedHeaderData.value
-})
-
-onMounted(async () => {
-  try {
-    if (!props.headerData) {
-      fetchedHeaderData.value = await fetchHeader()
-    }
-    
-    if (!activeHeaderData.value?.leftNavTabs || activeHeaderData.value.leftNavTabs.length === 0) {
-      const catData = await fetchCollection('shop-by-categories')
-      const collData = await fetchCollection('shop-by-collections')
-      const categoriesList = await fetchCollection('categories')
-      const collectionsList = await fetchCollection('collections')
-      
-      shopByCategory.value = {
-        name: typeof catData === 'string' ? catData : catData?.name || 'Shop By Categories',
-        children: Array.isArray(categoriesList) ? categoriesList : categoriesList?.children || []
-      }
-      shopByCollection.value = {
-        name: typeof collData === 'string' ? collData : collData?.name || 'Shop By Collections',
-        children: Array.isArray(collectionsList) ? collectionsList : collectionsList?.children || []
-      }
-    }
-  } catch (err) {
-    console.error('Error fetching navigation data:', err);
-  }
+  headerData: { type: Object, default: null },
 });
 
-const navTabs = computed(() => {
-  if (activeHeaderData.value?.leftNavTabs && activeHeaderData.value.leftNavTabs.length > 0) {
-    return activeHeaderData.value.leftNavTabs
-  }
-  
-  return [
-    {
-      tabName: shopByCategory.value.name,
-      type: 'dropdown',
-      categories: (shopByCategory.value.children || []).map(cat => ({
-        title: cat.name,
-        url: `/${cat.slug || ''}`,
-        sections: (cat.children || []).map(child => ({
-          title: child.name,
-          url: `/${child.slug || ''}`,
-          items: (child.children || []).map(grand => ({
-            title: grand.name,
-            url: `/${grand.slug || ''}`
-          }))
-        }))
-      }))
-    },
-    {
-      tabName: shopByCollection.value.name,
-      type: 'dropdown',
-      categories: (shopByCollection.value.children || []).map(col => ({
-        title: col.name,
-        url: `/${col.slug || ''}`,
-        sections: (col.children || []).map(child => ({
-          title: child.name,
-          url: `/${child.slug || ''}`,
-          items: (child.children || []).map(grand => ({
-            title: grand.name,
-            url: `/${grand.slug || ''}`
-          }))
-        }))
-      }))
-    }
-  ]
-})
+const headerRef = computed(() => props.headerData);
+const { navTabs } = await useNavTabs(headerRef);
 </script>
 
 <template>

@@ -48,9 +48,10 @@ export const useCmsStore = defineStore('cms', () => {
    * @param {String} slug 
    */
   async function fetchPage(slug) {
-    loading.value = true;
-    error.value = null;
-
+      loading.value = true;
+      error.value = null;
+      pageBlocks.value = [];
+      pageMeta.value = {};
     try {
       const response = await $fetch(`/api/cms/page?slug=${slug}`);
       pageMeta.value = response?.meta || {};

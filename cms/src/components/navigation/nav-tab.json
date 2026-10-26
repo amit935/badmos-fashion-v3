@@ -13,14 +13,30 @@
     },
     "type": {
       "type": "enumeration",
+      "default": "dropdown",
       "enum": [
         "dropdown",
         "direct_link"
-      ],
-      "default": "dropdown"
+      ]
     },
     "url": {
       "type": "string"
+    },
+    "onlyFetchFromVendure": {
+      "type": "boolean"
+    },
+    "showManualListFirst": {
+      "type": "boolean",
+      "conditions": {
+        "visible": {
+          "==": [
+            {
+              "var": "onlyFetchFromVendure"
+            },
+            false
+          ]
+        }
+      }
     },
     "isExternal": {
       "type": "boolean",
@@ -28,8 +44,23 @@
     },
     "categories": {
       "type": "component",
+      "conditions": {
+        "visible": {
+          "==": [
+            {
+              "var": "onlyFetchFromVendure"
+            },
+            false
+          ]
+        }
+      },
+      "component": "navigation.nav-category",
+      "repeatable": true
+    },
+    "vendureCollections": {
+      "type": "component",
       "repeatable": true,
-      "component": "navigation.nav-category"
+      "component": "navigation.vendure-collection"
     }
   }
 }

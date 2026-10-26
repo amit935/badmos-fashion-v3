@@ -1,68 +1,34 @@
 <script setup>
-import { useQueryCollection } from '~/composables/useQueryCollection.js'
-import { useSignout } from '~/composables/useSignout.js'
-import { useAuthStore } from '~/store/auth'
-import { useStrapiHeader } from '~/composables/useStrapiHeader.js'
-import { ref, onMounted, computed } from 'vue'
+import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
-import { useI18n } from 'vue-i18n'
+import { storeToRefs } from 'pinia'
+import { useAuthStore } from '~/store/auth'
+import { useSignout } from '~/composables/useSignout.js'
 
 const props = defineProps({
-  headerData: {
-    type: Object,
-    default: null
-  }
+  headerData: { type: Object, default: null }
 })
 
-const { isAuthenticated } = useAuthStore()
+const authStore = useAuthStore()
+const { isAuthenticated } = storeToRefs(authStore)
 const { signOut } = useSignout()
-const { fetchCollection } = useQueryCollection()
-const { fetchHeader } = useStrapiHeader()
 const router = useRouter()
-const { t } = useI18n()
 
-const fetchedHeaderData = ref(null)
-const userLinks = ref([])
-
-const activeHeaderData = computed(() => {
-  return props.headerData || fetchedHeaderData.value
-})
+const activeHeaderData = computed(() => props.headerData)
 
 const userMenuItems = computed(() => {
   const strapiLinks = activeHeaderData.value?.userMenu?.userLinks
   if (strapiLinks && strapiLinks.length > 0) {
     return strapiLinks.map(l => ({ name: l.title, url: l.url }))
   }
-  
-  if (Array.isArray(userLinks.value?.children)) {
-    return userLinks.value.children.map(l => ({
-      name: l.name,
-      url: l.customFields?.externalLink || '#'
-    }))
-  }
-  
   return []
 })
 
-const showCartButton = computed(() => {
-  return activeHeaderData.value?.showCartButton !== false
-})
-
-const guestTitle = computed(() => {
-  return activeHeaderData.value?.userMenu?.guestTitle || 'Welcome to Badmos Fashion'
-})
-
-const joinClanLabel = computed(() => {
-  return activeHeaderData.value?.userMenu?.joinClanButtonLabel || 'Join The Clan'
-})
-
-const joinClanUrl = computed(() => {
-  return activeHeaderData.value?.userMenu?.joinClanButtonUrl || '/login'
-})
-
-const signOutLabel = computed(() => {
-  return activeHeaderData.value?.userMenu?.signOutLabel || 'Sign Out'
-})
+const showCartButton = computed(() => activeHeaderData.value?.showCartButton !== false)
+const guestTitle = computed(() => activeHeaderData.value?.userMenu?.guestTitle || 'Welcome to Badmos Fashion')
+const joinClanLabel = computed(() => activeHeaderData.value?.userMenu?.joinClanButtonLabel || 'Join The Clan')
+const joinClanUrl = computed(() => activeHeaderData.value?.userMenu?.joinClanButtonUrl || '/login')
+const signOutLabel = computed(() => activeHeaderData.value?.userMenu?.signOutLabel || 'Sign Out')
 
 const goToJoinClan = () => {
   if (joinClanUrl.value.startsWith('http')) {
@@ -74,26 +40,15 @@ const goToJoinClan = () => {
 
 const signOutAndRedirect = async () => {
   try {
-    await signOut();
-    window.location.href = '/';
+    await signOut()
+    window.location.href = '/'
   } catch (error) {
-    console.error('Error during sign out:', error);
+    console.error('Error during sign out:', error)
   }
-};
+}
 
-onMounted(async () => {
-  try {
-    if (!props.headerData) {
-      fetchedHeaderData.value = await fetchHeader()
-    }
-    userLinks.value = await fetchCollection('user')
-  } catch (err) {
-    console.error('Error fetching user links data:', err);
-  }
-});
-
-const menuOpen = ref(false);
-const toggleMenu = () => { menuOpen.value = !menuOpen.value; };
+const menuOpen = ref(false)
+const toggleMenu = () => { menuOpen.value = !menuOpen.value }
 </script>
 
 <template>

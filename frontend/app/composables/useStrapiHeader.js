@@ -1,77 +1,29 @@
-import { ref } from 'vue'
+const POPULATE =
+  'populate[leftNavTabs][populate][vendureCollections]=true&populate[leftNavTabs][populate][categories][populate][sections][populate]=items&populate[userMenu][populate]=userLinks&populate[topBar][populate]=announcements&populate[logoImage]=true';
 
+const DEFAULT_HEADER = {
+  logoText: 'BADMOS',
+  logoLink: '/',
+  showCartButton: true,
+  topBar: { enabled: false, announcements: [] },
+  userMenu: { showUserDropdown: true, userLinks: [] },
+  leftNavTabs: [],
+};
+
+// Call as: const { data: headerData } = await useStrapiHeader()
 export function useStrapiHeader() {
-  const headerData = ref(null)
-  const loading = ref(false)
-  const error = ref(null)
+  const config = useRuntimeConfig();
+  let cmsUrl = config.public?.cmsUrl || 'http://localhost:1337/api';
+  // Node on the server can fail to reach "localhost" (IPv6), so use 127.0.0.1 there only
+  if (import.meta.server) cmsUrl = cmsUrl.replace('localhost', '127.0.0.1');
 
-  const defaultMockHeader = {
-    logoText: 'BADMOS',
-    logoLink: '/',
-    showCartButton: true,
-    topBar: {
-      enabled: false,
-      announcementText: '',
-      linkUrl: ''
-    },
-    userMenu: {
-      showUserDropdown: true,
-      guestTitle: 'guest.profileDropdown.title',
-      loginButtonLabel: 'auth.login.altTitle',
-      registerButtonLabel: 'auth.register.altTitle',
-      signOutLabel: 'Sign Out',
-      userLinks: []
-    },
-    leftNavTabs: [
-      {
-        tabName: 'Shop By Categories',
-        type: 'dropdown',
-        url: '',
-        categories: []
-      },
-      {
-        tabName: 'Shop By Collections',
-        type: 'dropdown',
-        url: '',
-        categories: []
-      }
-    ]
-  }
-
-  async function fetchHeader() {
-    loading.value = true
-    error.value = null
-    const config = useRuntimeConfig()
-    const cmsUrl = config.public?.cmsUrl || 'http://localhost:1337/api'
-
+  return useAsyncData('strapi-header', async () => {
     try {
-      const populateQuery = 'populate[leftNavTabs][populate][categories][populate][sections][populate]=items&populate[userMenu][populate]=userLinks&populate[topBar][populate]=announcements&populate[logoImage]=true'
-      const response = await fetch(`${cmsUrl}/header?${populateQuery}`)
-      if (!response.ok) {
-        throw new Error(`Failed to fetch header: ${response.statusText}`)
-      }
-      const json = await response.json()
-      if (json && json.data) {
-        headerData.value = json.data
-      } else {
-        headerData.value = defaultMockHeader
-      }
+      const json = await $fetch(`${cmsUrl}/header?${POPULATE}`);
+      return json?.data || DEFAULT_HEADER;
     } catch (err) {
-      console.warn('Unable to fetch header from Strapi, using default schema structure:', err)
-      error.value = err
-      headerData.value = defaultMockHeader
-    } finally {
-      loading.value = false
+      console.warn('Unable to fetch header from Strapi, using defaults:', err?.message);
+      return DEFAULT_HEADER;
     }
-
-    return headerData.value
-  }
-
-  return {
-    headerData,
-    loading,
-    error,
-    fetchHeader,
-    defaultMockHeader
-  }
+  });
 }

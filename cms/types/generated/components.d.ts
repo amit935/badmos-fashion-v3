@@ -138,10 +138,16 @@ export interface NavigationNavTab extends Struct.ComponentSchema {
   attributes: {
     categories: Schema.Attribute.Component<'navigation.nav-category', true>;
     isExternal: Schema.Attribute.Boolean & Schema.Attribute.DefaultTo<false>;
+    onlyFetchFromVendure: Schema.Attribute.Boolean;
+    showManualListFirst: Schema.Attribute.Boolean;
     tabName: Schema.Attribute.String & Schema.Attribute.Required;
     type: Schema.Attribute.Enumeration<['dropdown', 'direct_link']> &
       Schema.Attribute.DefaultTo<'dropdown'>;
     url: Schema.Attribute.String;
+    vendureCollections: Schema.Attribute.Component<
+      'navigation.vendure-collection',
+      true
+    >;
   };
 }
 
@@ -196,6 +202,17 @@ export interface NavigationUserMenu extends Struct.ComponentSchema {
   };
 }
 
+export interface NavigationVendureCollection extends Struct.ComponentSchema {
+  collectionName: 'components_navigation_vendure_collections';
+  info: {
+    displayName: 'Vendure Collection';
+    icon: 'link';
+  };
+  attributes: {
+    slug: Schema.Attribute.String & Schema.Attribute.Required;
+  };
+}
+
 export interface SectionsProductListSection extends Struct.ComponentSchema {
   collectionName: 'components_sections_product_list_sections';
   info: {
@@ -228,6 +245,7 @@ declare module '@strapi/strapi' {
       'navigation.social-link': NavigationSocialLink;
       'navigation.top-bar-item': NavigationTopBarItem;
       'navigation.user-menu': NavigationUserMenu;
+      'navigation.vendure-collection': NavigationVendureCollection;
       'sections.product-list-section': SectionsProductListSection;
     }
   }

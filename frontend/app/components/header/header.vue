@@ -1,11 +1,11 @@
 <script setup>
-import { ref, onMounted, onUnmounted, computed, watch } from 'vue';
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
 import { useStrapiHeader } from '~/composables/useStrapiHeader.js';
 
 const menuOpen = ref(false);
 const toggleMenu = () => { menuOpen.value = !menuOpen.value; };
 
-const { headerData, fetchHeader } = useStrapiHeader();
+const { data: headerData } = await useStrapiHeader();
 const { getStrapiMedia } = useStrapiMedia();
 
 const activeAnnouncementIndex = ref(0);
@@ -18,7 +18,7 @@ const announcements = computed(() => {
     return [{
       announcementText: headerData.value.topBar.announcementText,
       linkUrl: headerData.value.topBar.linkUrl,
-      linkText: headerData.value.topBar.linkText
+      linkText: headerData.value.topBar.linkText,
     }];
   }
   return [];
@@ -46,18 +46,9 @@ watch(announcements, () => {
   startAnnouncementTimer();
 });
 
-onMounted(async () => {
-  try {
-    await fetchHeader();
-    startAnnouncementTimer();
-  } catch (err) {
-    console.error('Error fetching header in header.vue:', err);
-  }
-});
-
-onUnmounted(() => {
-  stopAnnouncementTimer();
-});
+// Timers only run in the browser
+onMounted(startAnnouncementTimer);
+onUnmounted(stopAnnouncementTimer);
 </script>
 
 <template>

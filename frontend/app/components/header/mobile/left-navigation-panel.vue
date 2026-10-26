@@ -1,108 +1,28 @@
 <script setup>
-import { ref, onMounted, computed } from 'vue';
-import { useQueryCollection } from '~/composables/useQueryCollection.js';
-import { useStrapiHeader } from '~/composables/useStrapiHeader.js';
+import { ref, computed } from 'vue';
+import { useNavTabs } from '~/composables/useNavTabs.js';
 
-const { fetchCollection } = useQueryCollection();
-const { fetchHeader } = useStrapiHeader();
+const props = defineProps({
+  headerData: { type: Object, default: null },
+  toggleMenu: { type: Function, default: null },
+});
+const emit = defineEmits(['toggleMenu']);
 
-const headerData = ref(null);
-const shopByCategory = ref({ name: 'Shop By Categories', children: [] });
-const shopByCollection = ref({ name: 'Shop By Collections', children: [] });
+const headerRef = computed(() => props.headerData);
+const { navTabs } = await useNavTabs(headerRef);
 
-// Track which top-level tabs are open
 const openTabs = ref(new Set());
-// Track which sections are expanded
 const expandedItems = ref(new Set());
 
 const toggleTab = (tabKey) => {
-  if (openTabs.value.has(tabKey)) {
-    openTabs.value.delete(tabKey);
-  } else {
-    openTabs.value.add(tabKey);
-  }
+  if (openTabs.value.has(tabKey)) openTabs.value.delete(tabKey);
+  else openTabs.value.add(tabKey);
 };
 
 const toggleItem = (itemKey) => {
-  if (expandedItems.value.has(itemKey)) {
-    expandedItems.value.delete(itemKey);
-  } else {
-    expandedItems.value.add(itemKey);
-  }
+  if (expandedItems.value.has(itemKey)) expandedItems.value.delete(itemKey);
+  else expandedItems.value.add(itemKey);
 };
-
-onMounted(async () => {
-  try {
-    headerData.value = await fetchHeader();
-    if (!headerData.value?.leftNavTabs || headerData.value.leftNavTabs.length === 0) {
-      const catData = await fetchCollection('shop-by-categories');
-      const collData = await fetchCollection('shop-by-collections');
-      const categoriesList = await fetchCollection('categories');
-      const collectionsList = await fetchCollection('collections');
-      
-      shopByCategory.value = {
-        name: typeof catData === 'string' ? catData : catData?.name || 'Shop By Categories',
-        children: Array.isArray(categoriesList) ? categoriesList : categoriesList?.children || []
-      };
-      shopByCollection.value = {
-        name: typeof collData === 'string' ? collData : collData?.name || 'Shop By Collections',
-        children: Array.isArray(collectionsList) ? collectionsList : collectionsList?.children || []
-      };
-    }
-  } catch (err) {
-    console.error('Error fetching navigation data:', err);
-  }
-});
-
-const navTabs = computed(() => {
-  if (headerData.value?.leftNavTabs && headerData.value.leftNavTabs.length > 0) {
-    return headerData.value.leftNavTabs;
-  }
-  
-  return [
-    {
-      tabName: shopByCategory.value.name,
-      type: 'dropdown',
-      categories: (shopByCategory.value.children || []).map(cat => ({
-        title: cat.name,
-        url: `/${cat.slug || ''}`,
-        sections: (cat.children || []).map(child => ({
-          title: child.name,
-          url: `/${child.slug || ''}`,
-          items: (child.children || []).map(grand => ({
-            title: grand.name,
-            url: `/${grand.slug || ''}`
-          }))
-        }))
-      }))
-    },
-    {
-      tabName: shopByCollection.value.name,
-      type: 'dropdown',
-      categories: (shopByCollection.value.children || []).map(col => ({
-        title: col.name,
-        url: `/${col.slug || ''}`,
-        sections: (col.children || []).map(child => ({
-          title: child.name,
-          url: `/${child.slug || ''}`,
-          items: (child.children || []).map(grand => ({
-            title: grand.name,
-            url: `/${grand.slug || ''}`
-          }))
-        }))
-      }))
-    }
-  ];
-});
-
-const props = defineProps({
-  toggleMenu: {
-    type: Function,
-    default: null
-  }
-});
-
-const emit = defineEmits(['toggleMenu']);
 </script>
 
 <template>
