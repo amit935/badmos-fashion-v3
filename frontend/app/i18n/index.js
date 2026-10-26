@@ -26,6 +26,10 @@ const messages = {
     footer: {
       copyright: '© 2026 Badmos Fashion. All rights reserved.',
     },
+    product: { taxInclusive: 'inclusive of {label} which is {amount}' },
+    locale: {
+      currency: 'en-IN'
+    },
   },
 };
 

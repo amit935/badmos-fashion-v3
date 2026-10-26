@@ -1,51 +1,79 @@
 <script setup>
-import { useRoute } from 'vue-router';
 import { useCmsStore } from '~/store/cms';
-import { useHead } from '#imports';
 import CarouselHeroCarousel from '~/components/carousel/hero-carousel.vue';
 import ProductListSection from '~/components/sections/product-list-section.vue';
+import CollectionListing from '~/components/collection/CollectionListing.vue';
+import ProductDetail from '~/components/product/ProductDetail.vue';
 
 definePageMeta({
   layout: 'app-layout',
+  key: (route) => route.fullPath,
 });
 
 const route = useRoute();
 const cmsStore = useCmsStore();
 
-const slugParam = route.params.slug;
-const slugPath = Array.isArray(slugParam) ? `/${slugParam.join('/')}` : (slugParam ? `/${slugParam}` : '/');
+const slugPath = computed(() => {
+  const s = route.params.slug;
+  return Array.isArray(s) ? `/${s.join('/')}` : `/${s || ''}`;
+});
 
-await useAsyncData(`cms-page-${slugPath}`, () => cmsStore.fetchPage(slugPath), { getCachedData: () => null });
+// Everything the page needs lives in this one payload, so server and client agree
+const { data: resolved } = await useAsyncData(`page-${slugPath.value}`, async () => {
+  let page = null;
+  try {
+    page = await cmsStore.fetchPage(slugPath.value);
+  } catch (e) {
+    cmsStore.clearPage();
+  }
+  if (page?.blocks?.length) {
+    return { type: 'cms', blocks: page.blocks, meta: page.meta || {} };
+  }
+  return await $fetch('/api/shop/resolve', { query: { path: slugPath.value } });
+});
 
-useHead({
-  title: () => cmsStore.pageMeta?.title || '',
+const r = resolved.value;
+
+if ((r?.type === 'product' || r?.type === 'collection') && r.canonical !== slugPath.value) {
+  await navigateTo(r.canonical, { redirectCode: 301, replace: true });
+}
+
+if (!r || r.type === 'none') {
+  throw createError({ statusCode: 404, statusMessage: 'Page not found', fatal: true });
+}
+
+useHead(() => {
+  const x = resolved.value;
+  if (x?.type === 'product') {
+    return { title: x.product.name, link: [{ rel: 'canonical', href: `https://yourdomain.com${x.canonical}` }] };
+  }
+  if (x?.type === 'collection') {
+    return { title: x.collection.name, link: [{ rel: 'canonical', href: `https://yourdomain.com${x.canonical}` }] };
+  }
+  return { title: x?.meta?.title || '' };
 });
 
 const componentMap = {
   'carousel.hero-carousel': CarouselHeroCarousel,
-  'hero-carousel': CarouselHeroCarousel,
   'sections.product-list-section': ProductListSection,
-  'product-list-section': ProductListSection,
-  'sections.product-list': ProductListSection,
-  'product-list': ProductListSection
 };
-
-function resolveComponentBlock(strapiId) {
-  if (!strapiId) return 'div';
-  return componentMap[strapiId] || CarouselHeroCarousel || 'div';
-}
 </script>
 
 <template>
   <div class="cms-page min-h-screen">
-    <!-- Page Builder Render Loop (Strictly renders blocks fetched from Strapi) -->
-    <div class="page-blocks flex flex-col gap-y-0">
-      <component 
-        v-for="(block, index) in cmsStore.pageBlocks"
-        :key="block.id || index"
-        :is="resolveComponentBlock(block.__component)"
+    <div v-if="resolved?.type === 'cms'" class="page-blocks flex flex-col">
+      <component
+        v-for="(block, i) in resolved.blocks"
+        :key="block.id || i"
+        :is="componentMap[block.__component] || 'div'"
         v-bind="block"
       />
     </div>
+    <CollectionListing
+      v-else-if="resolved?.type === 'collection'"
+      :collection="resolved.collection"
+      :crumbs="resolved.crumbs"
+    />
+    <ProductDetail v-else-if="resolved?.type === 'product'" :product="resolved.product" />
   </div>
 </template>
