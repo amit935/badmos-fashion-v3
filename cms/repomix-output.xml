@@ -1,0 +1,3989 @@
+This file is a merged representation of the entire codebase, combined into a single document by Repomix.
+
+<file_summary>
+This section contains a summary of this file.
+
+<purpose>
+This file contains a packed representation of the entire repository's contents.
+It is designed to be easily consumable by AI systems for analysis, code review,
+or other automated processes.
+</purpose>
+
+<file_format>
+The content is organized as follows:
+1. This summary section
+2. Repository information
+3. Directory structure
+4. Repository files (if enabled)
+5. Multiple file entries, each consisting of:
+  - File path as an attribute
+  - Full contents of the file
+</file_format>
+
+<usage_guidelines>
+- This file should be treated as read-only. Any changes should be made to the
+  original repository files, not this packed version.
+- When processing this file, use the file path to distinguish
+  between different files in the repository.
+- Be aware that this file may contain sensitive information. Handle it with
+  the same level of security as you would the original repository.
+</usage_guidelines>
+
+<notes>
+- Some files may have been excluded based on .gitignore rules and Repomix's configuration
+- Binary files are not included in this packed representation. Please refer to the Repository Structure section for a complete list of file paths, including binary files
+- Files matching patterns in .gitignore are excluded
+- Files matching default ignore patterns are excluded
+- Files are sorted by Git change count (files with more changes are at the bottom)
+</notes>
+
+</file_summary>
+
+<directory_structure>
+config/
+  admin.ts
+  api.ts
+  database.ts
+  middlewares.ts
+  plugins.ts
+  server.ts
+database/
+  migrations/
+    .gitkeep
+public/
+  uploads/
+    .gitkeep
+  robots.txt
+src/
+  admin/
+    components/
+      VendureProductSelector.tsx
+    app.example.tsx
+    app.tsx
+    tsconfig.json
+    vite.config.example.ts
+  api/
+    footer/
+      content-types/
+        footer/
+          schema.json
+      controllers/
+        footer.ts
+      routes/
+        footer.ts
+      services/
+        footer.ts
+    header/
+      content-types/
+        header/
+          schema.json
+      controllers/
+        header.ts
+      routes/
+        header.ts
+      services/
+        header.ts
+    page/
+      content-types/
+        page/
+          schema.json
+      controllers/
+        page.ts
+      routes/
+        page.ts
+      services/
+        page.ts
+    vendure/
+      controllers/
+        vendure.ts
+      routes/
+        vendure.ts
+      services/
+        vendure.ts
+    .gitkeep
+  components/
+    carousel/
+      hero-asset.json
+      hero-carousel.json
+      hero-collection.json
+    navigation/
+      footer-column.json
+      header-top-bar.json
+      link-item.json
+      nav-category.json
+      nav-section.json
+      nav-tab.json
+      social-link.json
+      top-bar-item.json
+      user-menu.json
+    sections/
+      product-list-section.json
+  extensions/
+    .gitkeep
+  index.ts
+types/
+  generated/
+    components.d.ts
+    contentTypes.d.ts
+.env.example
+.gitignore
+favicon.png
+package.json
+README.md
+tsconfig.json
+</directory_structure>
+
+<files>
+This section contains the contents of the repository's files.
+
+<file path="config/admin.ts">
+import type { Core } from '@strapi/strapi';
+
+const config = ({ env }: Core.Config.Shared.ConfigParams): Core.Config.Admin => ({
+  auth: {
+    secret: env('ADMIN_JWT_SECRET')!,
+  },
+  apiToken: {
+    salt: env('API_TOKEN_SALT')!,
+  },
+  transfer: {
+    token: {
+      salt: env('TRANSFER_TOKEN_SALT')!,
+    },
+  },
+  secrets: {
+    encryptionKey: env('ENCRYPTION_KEY')!,
+  },
+  flags: {
+    nps: env.bool('FLAG_NPS', true),
+    promoteEE: env.bool('FLAG_PROMOTE_EE', true),
+    docLinks: env.bool('FLAG_DOC_LINKS', true),
+  },
+});
+
+export default config;
+</file>
+
+<file path="config/api.ts">
+import type { Core } from '@strapi/strapi';
+
+const config: Core.Config.Api = {
+  rest: {
+    defaultLimit: 25,
+    maxLimit: 100,
+    withCount: true,
+    strictParams: true,
+  },
+  documents: {
+    strictParams: true,
+    strictRelations: true,
+  },
+};
+
+export default config;
+</file>
+
+<file path="config/database.ts">
+import path from 'path';
+import type { Core } from '@strapi/strapi';
+import { isDatabaseClientKind } from '@strapi/database';
+
+const config = ({ env }: Core.Config.Shared.ConfigParams): Core.Config.Database => {
+  const client = env('DATABASE_CLIENT', 'sqlite');
+
+  if (!isDatabaseClientKind(client)) {
+    throw new Error(
+      `Unsupported DATABASE_CLIENT: ${client}. Use "postgres", "mysql", or "sqlite".`
+    );
+  }
+
+  const connections: Record<Core.Config.Database.ClientKind, Core.Config.Database['connection']> = {
+    mysql: {
+      client: 'mysql',
+      connection: {
+        host: env('DATABASE_HOST', 'localhost'),
+        port: env.int('DATABASE_PORT', 3306),
+        database: env('DATABASE_NAME', 'strapi'),
+        user: env('DATABASE_USERNAME', 'strapi'),
+        password: env('DATABASE_PASSWORD', 'strapi'),
+        ssl: env.bool('DATABASE_SSL', false) && {
+          key: env('DATABASE_SSL_KEY', undefined),
+          cert: env('DATABASE_SSL_CERT', undefined),
+          ca: env('DATABASE_SSL_CA', undefined),
+          capath: env('DATABASE_SSL_CAPATH', undefined),
+          cipher: env('DATABASE_SSL_CIPHER', undefined),
+          rejectUnauthorized: env.bool('DATABASE_SSL_REJECT_UNAUTHORIZED', true),
+        },
+      },
+      pool: { min: env.int('DATABASE_POOL_MIN', 2), max: env.int('DATABASE_POOL_MAX', 10) },
+    },
+    postgres: {
+      client: 'postgres',
+      connection: {
+        connectionString: env('DATABASE_URL'),
+        host: env('DATABASE_HOST', 'localhost'),
+        port: env.int('DATABASE_PORT', 5432),
+        database: env('DATABASE_NAME', 'strapi'),
+        user: env('DATABASE_USERNAME', 'strapi'),
+        password: env('DATABASE_PASSWORD', 'strapi'),
+        ssl: env.bool('DATABASE_SSL', false) && {
+          key: env('DATABASE_SSL_KEY', undefined),
+          cert: env('DATABASE_SSL_CERT', undefined),
+          ca: env('DATABASE_SSL_CA', undefined),
+          capath: env('DATABASE_SSL_CAPATH', undefined),
+          cipher: env('DATABASE_SSL_CIPHER', undefined),
+          rejectUnauthorized: env.bool('DATABASE_SSL_REJECT_UNAUTHORIZED', true),
+        },
+        schema: env('DATABASE_SCHEMA', 'public'),
+      },
+      pool: { min: env.int('DATABASE_POOL_MIN', 2), max: env.int('DATABASE_POOL_MAX', 10) },
+    },
+    sqlite: {
+      client: 'sqlite',
+      connection: {
+        filename: path.join(__dirname, '..', '..', env('DATABASE_FILENAME', '.tmp/data.db')),
+      },
+      useNullAsDefault: true,
+    },
+  };
+
+  return {
+    connection: {
+      ...connections[client],
+      acquireConnectionTimeout: env.int('DATABASE_CONNECTION_TIMEOUT', 60000),
+    },
+  };
+};
+
+export default config;
+</file>
+
+<file path="config/middlewares.ts">
+import type { Core } from '@strapi/strapi';
+
+const config = ({ env }: Core.Config.Shared.ConfigParams): Core.Config.Middlewares => [
+  'strapi::logger',
+  'strapi::errors',
+  {
+    name: 'strapi::security',
+    config: {
+      contentSecurityPolicy: {
+        useDefaults: true,
+        directives: {
+          'connect-src': ["'self'", 'https:'],
+          'img-src': [
+            "'self'",
+            'data:',
+            'blob:',
+            'market-assets.strapi.io',
+            '*.r2.cloudflarestorage.com',
+            '*.r2.dev',
+            env('CF_R2_PUBLIC_URL') || '',
+          ].filter(Boolean),
+          'media-src': [
+            "'self'",
+            'data:',
+            'blob:',
+            'market-assets.strapi.io',
+            '*.r2.cloudflarestorage.com',
+            '*.r2.dev',
+            env('CF_R2_PUBLIC_URL') || '',
+          ].filter(Boolean),
+          upgradeInsecureRequests: null,
+        },
+      },
+    },
+  },
+  'strapi::cors',
+  'strapi::poweredBy',
+  'strapi::query',
+  'strapi::body',
+  'strapi::session',
+  'strapi::favicon',
+  'strapi::public',
+];
+
+export default config;
+</file>
+
+<file path="config/plugins.ts">
+import type { Core } from '@strapi/strapi';
+
+const allowedMediaTypes = [
+  'image/*',
+  'video/*',
+  'audio/*',
+  'application/pdf',
+  'application/msword',
+  'application/vnd.openxmlformats-officedocument.*',
+  'text/plain',
+  'text/csv',
+];
+
+const deniedTypes = [
+  'image/svg+xml',
+  'application/vnd.microsoft.portable-executable',
+  'application/x-msdownload',
+  'application/x-msdos-program',
+  'application/x-executable',
+  'application/x-dosexec',
+  'application/x-sh',
+  'text/x-shellscript',
+  'application/x-mach-binary',
+];
+
+const config = ({ env }: Core.Config.Shared.ConfigParams): Core.Config.Plugin => {
+  const isR2Enabled = !!env('CF_R2_ACCESS_KEY_ID');
+
+  return {
+    'users-permissions': {
+      config: {
+        jwtManagement: 'refresh',
+        sessions: {
+          httpOnly: true,
+        },
+      },
+    },
+    upload: {
+      config: {
+        ...(isR2Enabled
+          ? {
+              provider: 'aws-s3',
+              providerOptions: {
+                baseUrl: env('CF_R2_PUBLIC_URL'),
+                rootPath: env('CF_R2_ROOT_PATH', ''),
+                s3Options: {
+                  credentials: {
+                    accessKeyId: env('CF_R2_ACCESS_KEY_ID'),
+                    secretAccessKey: env('CF_R2_SECRET_ACCESS_KEY'),
+                  },
+                  region: env('CF_R2_REGION', 'auto'),
+                  endpoint: env('CF_R2_ENDPOINT'),
+                  params: {
+                    Bucket: env('CF_R2_BUCKET'),
+                  },
+                },
+              },
+            }
+          : {}),
+        security: {
+          allowedTypes: allowedMediaTypes,
+          deniedTypes,
+        },
+      },
+    },
+  };
+};
+
+export default config;
+</file>
+
+<file path="config/server.ts">
+import type { Core } from '@strapi/strapi';
+
+const config = ({ env }: Core.Config.Shared.ConfigParams): Core.Config.Server => ({
+  host: env('HOST', '0.0.0.0'),
+  port: env.int('PORT', 1337),
+  app: {
+    keys: env.array('APP_KEYS')!,
+  },
+  webhooks: {
+    populateRelations: env.bool('WEBHOOKS_POPULATE_RELATIONS', false),
+  },
+});
+
+export default config;
+</file>
+
+<file path="database/migrations/.gitkeep">
+
+</file>
+
+<file path="public/uploads/.gitkeep">
+
+</file>
+
+<file path="public/robots.txt">
+# To prevent search engines from seeing the site altogether, uncomment the next two lines:
+# User-Agent: *
+# Disallow: /
+</file>
+
+<file path="src/admin/components/VendureProductSelector.tsx">
+import React, { useState, useEffect } from 'react';
+
+interface ProductItem {
+  id: string;
+  name: string;
+  slug: string;
+  asset?: string;
+  price?: number;
+  currency?: string;
+}
+
+interface CollectionItem {
+  id: string;
+  name: string;
+  slug: string;
+}
+
+interface FacetItem {
+  id: string;
+  name: string;
+  code: string;
+  values?: Array<{ id: string; name: string; code: string }>;
+}
+
+interface VendureProductSelectorProps {
+  name?: string;
+  value?: any;
+  onChange?: (e: { target: { name: string; value: any; type: string } }) => void;
+  disabled?: boolean;
+  [key: string]: any;
+}
+
+export default function VendureProductSelector({
+  name = 'productSlugs',
+  value,
+  onChange,
+  disabled = false
+}: VendureProductSelectorProps) {
+  // Normalize stored value (array of slug pointers)
+  const currentSlugs: string[] = Array.isArray(value)
+    ? value
+    : typeof value === 'string' && value.trim()
+    ? value.split(',').map(s => s.trim()).filter(Boolean)
+    : [];
+
+  const [filterType, setFilterType] = useState<'name' | 'collection' | 'facet' | 'all'>('name');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedCollection, setSelectedCollection] = useState('');
+  const [selectedFacet, setSelectedFacet] = useState('');
+
+  const [collections, setCollections] = useState<CollectionItem[]>([]);
+  const [facets, setFacets] = useState<FacetItem[]>([]);
+  const [searchResults, setSearchResults] = useState<ProductItem[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Load collections & facets on mount
+  useEffect(() => {
+    fetchCollections();
+    fetchFacets();
+  }, []);
+
+  const fetchCollections = async () => {
+    try {
+      const res = await fetch('/api/vendure/collections');
+      const json = await res.json();
+      if (json.data && Array.isArray(json.data)) {
+        setCollections(json.data);
+      }
+    } catch (err) {
+      console.warn('Failed to load collections:', err);
+    }
+  };
+
+  const fetchFacets = async () => {
+    try {
+      const res = await fetch('/api/vendure/facets');
+      const json = await res.json();
+      if (json.data && Array.isArray(json.data)) {
+        setFacets(json.data);
+      }
+    } catch (err) {
+      console.warn('Failed to load facets:', err);
+    }
+  };
+
+  const handleSearch = async () => {
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const params = new URLSearchParams();
+      if (filterType === 'name' && searchTerm) {
+        params.append('term', searchTerm);
+      } else if (filterType === 'collection' && selectedCollection) {
+        params.append('collectionSlug', selectedCollection);
+      } else if (filterType === 'facet' && selectedFacet) {
+        params.append('facets', selectedFacet);
+      }
+
+      const res = await fetch(`/api/vendure/products?${params.toString()}`);
+      const json = await res.json();
+
+      if (json.products && Array.isArray(json.products)) {
+        setSearchResults(json.products);
+      } else {
+        setSearchResults([]);
+      }
+    } catch (err: any) {
+      setError(err.message || 'Error querying Vendure Admin API');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Run search on initial render or filter changes
+  useEffect(() => {
+    handleSearch();
+  }, [filterType, selectedCollection, selectedFacet]);
+
+  const updateStoredSlugs = (newSlugs: string[]) => {
+    if (onChange) {
+      onChange({
+        target: {
+          name,
+          value: newSlugs,
+          type: 'json'
+        }
+      });
+    }
+  };
+
+  const toggleProductSlug = (slug: string) => {
+    if (!slug) return;
+    if (currentSlugs.includes(slug)) {
+      updateStoredSlugs(currentSlugs.filter(s => s !== slug));
+    } else {
+      updateStoredSlugs([...currentSlugs, slug]);
+    }
+  };
+
+  const handleSelectAll = () => {
+    const searchSlugs = searchResults.map(p => p.slug).filter(Boolean);
+    const combined = Array.from(new Set([...currentSlugs, ...searchSlugs]));
+    updateStoredSlugs(combined);
+  };
+
+  const handleDeselectAll = () => {
+    const searchSlugs = searchResults.map(p => p.slug);
+    const remaining = currentSlugs.filter(s => !searchSlugs.includes(s));
+    updateStoredSlugs(remaining);
+  };
+
+  const handleRemoveSlug = (slugToRemove: string) => {
+    updateStoredSlugs(currentSlugs.filter(s => s !== slugToRemove));
+  };
+
+  return (
+    <div style={{
+      border: '1px solid #dcdce4',
+      borderRadius: '4px',
+      padding: '16px',
+      background: '#ffffff',
+      fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+    }}>
+      {/* Header */}
+      <div style={{ marginBottom: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div>
+          <label style={{ fontSize: '13px', fontWeight: 600, color: '#32324d', display: 'block' }}>
+            Vendure Product Slug Pointers
+          </label>
+          <p style={{ fontSize: '11px', color: '#666687', margin: '2px 0 0 0' }}>
+            Filter products from Vendure API by Collection, Facet, or Name, and check products to store their slug pointers.
+          </p>
+        </div>
+        <span style={{
+          background: '#eaeaef',
+          color: '#4a4a6a',
+          fontSize: '11px',
+          fontWeight: 600,
+          padding: '3px 8px',
+          borderRadius: '12px'
+        }}>
+          {currentSlugs.length} Slugs Selected
+        </span>
+      </div>
+
+      {/* Filter Controls Row */}
+      <div style={{
+        display: 'flex',
+        gap: '8px',
+        marginBottom: '14px',
+        alignItems: 'center',
+        background: '#f6f6f9',
+        padding: '10px',
+        borderRadius: '4px'
+      }}>
+        {/* Filter Type Dropdown */}
+        <select
+          value={filterType}
+          onChange={(e) => setFilterType(e.target.value as any)}
+          disabled={disabled}
+          style={{
+            padding: '6px 10px',
+            borderRadius: '4px',
+            border: '1px solid #dcdce4',
+            fontSize: '12px',
+            fontWeight: 500,
+            background: '#ffffff',
+            cursor: 'pointer'
+          }}
+        >
+          <option value="name">Filter by Product Name</option>
+          <option value="collection">Filter by Collection</option>
+          <option value="facet">Filter by Facet</option>
+          <option value="all">All Vendure Products</option>
+        </select>
+
+        {/* Input depending on Filter Type */}
+        {filterType === 'name' && (
+          <input
+            type="text"
+            placeholder="Search product name..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+            disabled={disabled}
+            style={{
+              flex: 1,
+              padding: '6px 10px',
+              borderRadius: '4px',
+              border: '1px solid #dcdce4',
+              fontSize: '12px'
+            }}
+          />
+        )}
+
+        {filterType === 'collection' && (
+          <select
+            value={selectedCollection}
+            onChange={(e) => setSelectedCollection(e.target.value)}
+            disabled={disabled}
+            style={{
+              flex: 1,
+              padding: '6px 10px',
+              borderRadius: '4px',
+              border: '1px solid #dcdce4',
+              fontSize: '12px',
+              background: '#ffffff'
+            }}
+          >
+            <option value="">Select Collection...</option>
+            {collections.map(c => (
+              <option key={c.id} value={c.slug}>{c.name} ({c.slug})</option>
+            ))}
+          </select>
+        )}
+
+        {filterType === 'facet' && (
+          <select
+            value={selectedFacet}
+            onChange={(e) => setSelectedFacet(e.target.value)}
+            disabled={disabled}
+            style={{
+              flex: 1,
+              padding: '6px 10px',
+              borderRadius: '4px',
+              border: '1px solid #dcdce4',
+              fontSize: '12px',
+              background: '#ffffff'
+            }}
+          >
+            <option value="">Select Facet Value...</option>
+            {facets.map(f => (
+              <optgroup key={f.id} label={f.name}>
+                {(f.values || []).map(val => (
+                  <option key={val.id} value={val.id}>{val.name} ({val.code})</option>
+                ))}
+              </optgroup>
+            ))}
+          </select>
+        )}
+
+        <button
+          type="button"
+          onClick={handleSearch}
+          disabled={disabled || isLoading}
+          style={{
+            padding: '6px 14px',
+            background: '#4945ff',
+            color: '#ffffff',
+            border: 'none',
+            borderRadius: '4px',
+            fontSize: '12px',
+            fontWeight: 600,
+            cursor: 'pointer'
+          }}
+        >
+          {isLoading ? 'Searching...' : 'Search'}
+        </button>
+      </div>
+
+      {/* Select All / Deselect All Bar */}
+      <div style={{
+        display: 'flex',
+        justify: 'space-between',
+        alignItems: 'center',
+        marginBottom: '10px',
+        padding: '0 4px'
+      }}>
+        <span style={{ fontSize: '11px', color: '#666687', fontWeight: 500 }}>
+          {searchResults.length} matching products found
+        </span>
+
+        <div style={{ display: 'flex', gap: '8px' }}>
+          <button
+            type="button"
+            onClick={handleSelectAll}
+            disabled={disabled || searchResults.length === 0}
+            style={{
+              background: '#eafbe7',
+              color: '#277c16',
+              border: '1px solid #c2f0bb',
+              padding: '4px 10px',
+              borderRadius: '4px',
+              fontSize: '11px',
+              fontWeight: 600,
+              cursor: 'pointer'
+            }}
+          >
+            Select All Matching
+          </button>
+          <button
+            type="button"
+            onClick={handleDeselectAll}
+            disabled={disabled || searchResults.length === 0}
+            style={{
+              background: '#fceaea',
+              color: '#b72b2b',
+              border: '1px solid #f5c2c2',
+              padding: '4px 10px',
+              borderRadius: '4px',
+              fontSize: '11px',
+              fontWeight: 600,
+              cursor: 'pointer'
+            }}
+          >
+            Deselect All Matching
+          </button>
+        </div>
+      </div>
+
+      {/* Search Results Grid */}
+      <div style={{
+        maxHeight: '220px',
+        overflowY: 'auto',
+        border: '1px solid #eaeaef',
+        borderRadius: '4px',
+        padding: '8px',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '6px',
+        marginBottom: '14px',
+        background: '#fafafc'
+      }}>
+        {isLoading ? (
+          <div style={{ padding: '20px', textAlign: 'center', color: '#8e8ea9', fontSize: '12px' }}>
+            Fetching live products from Vendure API...
+          </div>
+        ) : error ? (
+          <div style={{ padding: '12px', textAlign: 'center', color: '#d02b20', fontSize: '12px' }}>
+            {error}
+          </div>
+        ) : searchResults.length === 0 ? (
+          <div style={{ padding: '20px', textAlign: 'center', color: '#8e8ea9', fontSize: '12px' }}>
+            No matching Vendure products found for this filter.
+          </div>
+        ) : (
+          searchResults.map(product => {
+            const isChecked = currentSlugs.includes(product.slug);
+            return (
+              <label
+                key={product.id || product.slug}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '10px',
+                  padding: '6px 10px',
+                  borderRadius: '4px',
+                  border: isChecked ? '1px solid #4945ff' : '1px solid #eaeaef',
+                  background: isChecked ? '#f0f0ff' : '#ffffff',
+                  cursor: disabled ? 'not-allowed' : 'pointer',
+                  userSelect: 'none'
+                }}
+              >
+                <input
+                  type="checkbox"
+                  checked={isChecked}
+                  onChange={() => toggleProductSlug(product.slug)}
+                  disabled={disabled}
+                  style={{ width: '16px', height: '16px', cursor: 'pointer' }}
+                />
+                {product.asset && (
+                  <img
+                    src={product.asset}
+                    alt={product.name}
+                    style={{ width: '32px', height: '32px', objectFit: 'cover', borderRadius: '3px' }}
+                  />
+                )}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: '12px', fontWeight: 600, color: '#272734' }}>
+                    {product.name}
+                  </div>
+                  <div style={{ fontSize: '11px', color: '#4945ff', fontFamily: 'monospace' }}>
+                    slug: {product.slug}
+                  </div>
+                </div>
+              </label>
+            );
+          })
+        )}
+      </div>
+
+      {/* Currently Stored Slug Pointers Badge Chips */}
+      <div>
+        <span style={{ fontSize: '11px', fontWeight: 600, color: '#666687', display: 'block', marginBottom: '6px' }}>
+          Stored Slug Pointers (Saved in Strapi):
+        </span>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+          {currentSlugs.length === 0 ? (
+            <span style={{ fontSize: '11px', color: '#8e8ea9', italic: 'true' }}>
+              No product slug pointers stored yet. Filter above and check products.
+            </span>
+          ) : (
+            currentSlugs.map(slug => (
+              <span
+                key={slug}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  background: '#e9e8ff',
+                  color: '#4945ff',
+                  border: '1px solid #d0cffd',
+                  padding: '3px 8px',
+                  borderRadius: '12px',
+                  fontSize: '11px',
+                  fontWeight: 600,
+                  fontFamily: 'monospace'
+                }}
+              >
+                {slug}
+                {!disabled && (
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveSlug(slug)}
+                    style={{
+                      border: 'none',
+                      background: 'transparent',
+                      color: '#4945ff',
+                      cursor: 'pointer',
+                      fontSize: '12px',
+                      padding: 0,
+                      lineHeight: 1
+                    }}
+                  >
+                    ×
+                  </button>
+                )}
+              </span>
+            ))
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+</file>
+
+<file path="src/admin/app.example.tsx">
+import type { StrapiApp } from '@strapi/strapi/admin';
+
+export default {
+  config: {
+    locales: [
+      // 'ar',
+      // 'fr',
+      // 'cs',
+      // 'de',
+      // 'da',
+      // 'es',
+      // 'he',
+      // 'id',
+      // 'it',
+      // 'ja',
+      // 'ko',
+      // 'ms',
+      // 'nl',
+      // 'no',
+      // 'pl',
+      // 'pt-BR',
+      // 'pt',
+      // 'ru',
+      // 'sk',
+      // 'sv',
+      // 'th',
+      // 'tr',
+      // 'uk',
+      // 'vi',
+      // 'zh-Hans',
+      // 'zh',
+    ],
+  },
+  bootstrap(app: StrapiApp) {
+    console.log(app);
+  },
+};
+</file>
+
+<file path="src/admin/app.tsx">
+import type { StrapiApp } from '@strapi/strapi/admin';
+
+export default {
+  config: {
+    locales: [],
+  },
+  register(app: StrapiApp) {
+    app.customFields.register({
+      name: 'vendure-product-selector',
+      type: 'json',
+      intlLabel: {
+        id: 'vendure-product-selector.label',
+        defaultMessage: 'Vendure Product Selector',
+      },
+      intlDescription: {
+        id: 'vendure-product-selector.description',
+        defaultMessage: 'Search Vendure products by name, collection, or facet and select product slug pointers',
+      },
+      components: {
+        Input: async () => import('./components/VendureProductSelector'),
+      },
+      options: {},
+    });
+  },
+  bootstrap(app: StrapiApp) {},
+};
+</file>
+
+<file path="src/admin/tsconfig.json">
+{
+  "compilerOptions": {
+    "target": "ESNext",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "useDefineForClassFields": true,
+    "lib": ["DOM", "DOM.Iterable", "ESNext"],
+    "allowJs": false,
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "strict": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "noEmit": true,
+    "jsx": "react-jsx"
+  },
+  "include": ["../plugins/**/admin/src/**/*", "./"],
+  "exclude": ["node_modules/", "build/", "dist/", "**/*.test.ts"]
+}
+</file>
+
+<file path="src/admin/vite.config.example.ts">
+import { mergeConfig, type UserConfig } from 'vite';
+
+export default (config: UserConfig) => {
+  // Important: always return the modified config
+  return mergeConfig(config, {
+    resolve: {
+      alias: {
+        '@': '/src',
+      },
+    },
+  });
+};
+</file>
+
+<file path="src/api/footer/content-types/footer/schema.json">
+{
+  "kind": "singleType",
+  "collectionName": "footers",
+  "info": {
+    "singularName": "footer",
+    "pluralName": "footers",
+    "displayName": "Footer Navigation",
+    "description": "Footer single type schema managing tagline, social links, navigation columns, about section, and copyright text"
+  },
+  "options": {
+    "draftAndPublish": true
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "taglineText": {
+      "type": "text"
+    },
+    "socialLinks": {
+      "type": "component",
+      "repeatable": true,
+      "component": "navigation.social-link"
+    },
+    "columns": {
+      "type": "component",
+      "repeatable": true,
+      "component": "navigation.footer-column"
+    },
+    "aboutTitle": {
+      "type": "string"
+    },
+    "aboutDescription": {
+      "type": "text"
+    },
+    "copyrightText": {
+      "type": "string"
+    }
+  }
+}
+</file>
+
+<file path="src/api/footer/controllers/footer.ts">
+import { factories } from '@strapi/strapi';
+
+export default factories.createCoreController('api::footer.footer');
+</file>
+
+<file path="src/api/footer/routes/footer.ts">
+import { factories } from '@strapi/strapi';
+
+export default factories.createCoreRouter('api::footer.footer');
+</file>
+
+<file path="src/api/footer/services/footer.ts">
+import { factories } from '@strapi/strapi';
+
+export default factories.createCoreService('api::footer.footer');
+</file>
+
+<file path="src/api/header/content-types/header/schema.json">
+{
+  "kind": "singleType",
+  "collectionName": "headers",
+  "info": {
+    "singularName": "header",
+    "pluralName": "headers",
+    "displayName": "Header / Navigation Bar",
+    "description": "Header navigation bar schema for Badmos Fashion"
+  },
+  "options": {
+    "draftAndPublish": true
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "logoText": {
+      "type": "string",
+      "default": "BADMOS"
+    },
+    "logoLink": {
+      "type": "string",
+      "default": "/"
+    },
+    "logoImage": {
+      "type": "media",
+      "multiple": false,
+      "required": false,
+      "allowedTypes": [
+        "images"
+      ]
+    },
+    "leftNavTabs": {
+      "type": "component",
+      "repeatable": true,
+      "component": "navigation.nav-tab"
+    },
+    "showCartButton": {
+      "type": "boolean",
+      "default": true
+    },
+    "userMenu": {
+      "type": "component",
+      "repeatable": false,
+      "component": "navigation.user-menu"
+    },
+    "topBar": {
+      "type": "component",
+      "repeatable": false,
+      "component": "navigation.header-top-bar"
+    }
+  }
+}
+</file>
+
+<file path="src/api/header/controllers/header.ts">
+import { factories } from '@strapi/strapi';
+
+export default factories.createCoreController('api::header.header');
+</file>
+
+<file path="src/api/header/routes/header.ts">
+import { factories } from '@strapi/strapi';
+
+export default factories.createCoreRouter('api::header.header');
+</file>
+
+<file path="src/api/header/services/header.ts">
+import { factories } from '@strapi/strapi';
+
+export default factories.createCoreService('api::header.header');
+</file>
+
+<file path="src/api/page/content-types/page/schema.json">
+{
+  "kind": "collectionType",
+  "collectionName": "pages",
+  "info": {
+    "singularName": "page",
+    "pluralName": "pages",
+    "displayName": "Page",
+    "description": "Dynamic page builder for Badmos Fashion pages"
+  },
+  "options": {
+    "draftAndPublish": true
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "title": {
+      "type": "string",
+      "required": true
+    },
+    "slug": {
+      "type": "string",
+      "required": true,
+      "unique": true,
+      "default": "/"
+    },
+    "seoTitle": {
+      "type": "string"
+    },
+    "seoDescription": {
+      "type": "text"
+    },
+    "blocks": {
+      "type": "dynamiczone",
+      "components": [
+        "carousel.hero-carousel",
+        "sections.product-list-section"
+      ]
+    }
+  }
+}
+</file>
+
+<file path="src/api/page/controllers/page.ts">
+import { factories } from '@strapi/strapi';
+
+export default factories.createCoreController('api::page.page');
+</file>
+
+<file path="src/api/page/routes/page.ts">
+import { factories } from '@strapi/strapi';
+
+export default factories.createCoreRouter('api::page.page');
+</file>
+
+<file path="src/api/page/services/page.ts">
+import { factories } from '@strapi/strapi';
+
+export default factories.createCoreService('api::page.page');
+</file>
+
+<file path="src/api/vendure/controllers/vendure.ts">
+/**
+ * Vendure API Controller for Strapi
+ * Exposes endpoints for searching Vendure products, fetching collections/facets,
+ * and resolving product slug pointers.
+ */
+
+export default {
+  /**
+   * GET /api/vendure/products
+   * Search Vendure products with filters: productName, collectionSlug, facets, limit
+   */
+  async searchProducts(ctx: any) {
+    try {
+      const { term, collectionSlug, facets, limit } = ctx.query;
+
+      const facetValueIds = typeof facets === 'string' 
+        ? facets.split(',').map((s: string) => s.trim()).filter(Boolean)
+        : Array.isArray(facets) ? facets : [];
+
+      const vendureService = strapi.service('api::vendure.vendure');
+      const result = await vendureService.searchVendureProducts({
+        term: typeof term === 'string' ? term : undefined,
+        collectionSlug: typeof collectionSlug === 'string' ? collectionSlug : undefined,
+        facetValueIds,
+        limit: limit ? parseInt(limit, 10) : 20,
+      });
+
+      ctx.send(result);
+    } catch (err: any) {
+      ctx.badRequest('Failed to search Vendure products', { error: err.message });
+    }
+  },
+
+  /**
+   * GET /api/vendure/collections
+   * Fetch list of available collections from Vendure
+   */
+  async getCollections(ctx: any) {
+    try {
+      const vendureService = strapi.service('api::vendure.vendure');
+      const collections = await vendureService.getVendureCollections();
+      ctx.send({ data: collections });
+    } catch (err: any) {
+      ctx.badRequest('Failed to fetch Vendure collections', { error: err.message });
+    }
+  },
+
+  /**
+   * GET /api/vendure/facets
+   * Fetch list of available facets from Vendure
+   */
+  async getFacets(ctx: any) {
+    try {
+      const vendureService = strapi.service('api::vendure.vendure');
+      const facets = await vendureService.getVendureFacets();
+      ctx.send({ data: facets });
+    } catch (err: any) {
+      ctx.badRequest('Failed to fetch Vendure facets', { error: err.message });
+    }
+  },
+
+  /**
+   * GET /api/vendure/resolve-slugs
+   * Resolve array of product slug pointers to preview information
+   */
+  async resolveSlugs(ctx: any) {
+    try {
+      const { slugs } = ctx.query;
+      const slugList = typeof slugs === 'string' 
+        ? slugs.split(',').map((s: string) => s.trim()).filter(Boolean)
+        : Array.isArray(slugs) ? slugs : [];
+
+      const vendureService = strapi.service('api::vendure.vendure');
+      const resolved = await vendureService.resolveSlugs(slugList);
+      ctx.send({ data: resolved });
+    } catch (err: any) {
+      ctx.badRequest('Failed to resolve product slugs', { error: err.message });
+    }
+  }
+};
+</file>
+
+<file path="src/api/vendure/routes/vendure.ts">
+/**
+ * Route configuration for Vendure API integration in Strapi
+ */
+
+export default {
+  routes: [
+    {
+      method: 'GET',
+      path: '/vendure/products',
+      handler: 'vendure.searchProducts',
+      config: {
+        policies: [],
+        auth: false,
+      },
+    },
+    {
+      method: 'GET',
+      path: '/vendure/collections',
+      handler: 'vendure.getCollections',
+      config: {
+        policies: [],
+        auth: false,
+      },
+    },
+    {
+      method: 'GET',
+      path: '/vendure/facets',
+      handler: 'vendure.getFacets',
+      config: {
+        policies: [],
+        auth: false,
+      },
+    },
+    {
+      method: 'GET',
+      path: '/vendure/resolve-slugs',
+      handler: 'vendure.resolveSlugs',
+      config: {
+        policies: [],
+        auth: false,
+      },
+    },
+  ],
+};
+</file>
+
+<file path="src/api/vendure/services/vendure.ts">
+/**
+ * Vendure API Integration Service for Strapi
+ * Communicates with Vendure Shop API to fetch live products, collections, and facets.
+ * Returns product slug pointers for Strapi storage.
+ *
+ * Uses the `products` query for general listing/search (works for ALL products,
+ * including those without variants), and the `search` query only for facet-based
+ * or collection-based filtering (which requires the DefaultSearchPlugin index).
+ */
+
+const VENDURE_API_URL = process.env.VENDURE_API_URL || process.env.NUXT_PUBLIC_API_URL || 'http://127.0.0.1:3000/shop-api';
+
+export default () => ({
+  /**
+   * Execute GraphQL query against Vendure API
+   */
+  async graphqlQuery(query: string, variables: Record<string, any> = {}) {
+    try {
+      console.log('[Vendure Service] Querying:', VENDURE_API_URL);
+      const response = await fetch(VENDURE_API_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ query, variables }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Vendure API returned status ${response.status}: ${response.statusText}`);
+      }
+
+      const json: any = await response.json();
+      if (json.errors && json.errors.length > 0) {
+        console.warn('[Vendure Service] GraphQL Errors:', JSON.stringify(json.errors));
+      }
+      return json.data;
+    } catch (err: any) {
+      console.error('[Vendure Service] Error in GraphQL query:', err.message);
+      return null;
+    }
+  },
+
+  /**
+   * Fetch products using the `products` query.
+   * This returns ALL products regardless of whether they have variants or not—
+   * unlike the `search` query which only indexes product variants.
+   */
+  async fetchProducts(filters: {
+    term?: string;
+    limit?: number;
+  }) {
+    // Build filter parameter for the products query
+    const hasFilter = !!filters.term;
+    const filterClause = hasFilter ? '$filter: ProductFilterParameter' : '';
+    const filterArg = hasFilter ? ', filter: $filter' : '';
+
+    const query = `
+      query GetVendureProducts($take: Int!${filterClause ? ', ' + filterClause : ''}) {
+        products(options: { take: $take${filterArg} }) {
+          totalItems
+          items {
+            id
+            name
+            slug
+            featuredAsset {
+              id
+              preview
+            }
+            variants {
+              priceWithTax
+              currencyCode
+            }
+          }
+        }
+      }
+    `;
+
+    const variables: Record<string, any> = {
+      take: filters.limit || 25,
+    };
+
+    if (filters.term) {
+      variables.filter = {
+        name: { contains: filters.term }
+      };
+    }
+
+    const data = await this.graphqlQuery(query, variables);
+    const productsResult = data?.products;
+
+    if (!productsResult || !productsResult.items) {
+      return {
+        totalItems: 0,
+        slugPointers: [],
+        products: []
+      };
+    }
+
+    const items = productsResult.items.map((item: any) => ({
+      id: item.id,
+      name: item.name,
+      slug: item.slug,
+      asset: item.featuredAsset?.preview || null,
+      price: item.variants?.[0]?.priceWithTax || 0,
+      currency: item.variants?.[0]?.currencyCode || 'USD'
+    }));
+
+    const slugs = items.map((item: any) => item.slug).filter(Boolean);
+
+    return {
+      totalItems: productsResult.totalItems || items.length,
+      slugPointers: slugs,
+      products: items,
+    };
+  },
+
+  /**
+   * Search products using the `search` query (DefaultSearchPlugin).
+   * This is needed for facet-based and collection-based filtering,
+   * but only indexes products that have at least one variant.
+   */
+  async searchVendureProducts(filters: {
+    term?: string;
+    collectionSlug?: string;
+    collectionId?: string;
+    facetValueIds?: string[];
+    limit?: number;
+  }) {
+    // If no collection or facet filter is applied, use the products query instead
+    // since it returns ALL products including those without variants
+    const usesSearchOnlyFilters = (
+      filters.collectionSlug ||
+      filters.collectionId ||
+      (filters.facetValueIds && filters.facetValueIds.length > 0)
+    );
+
+    if (!usesSearchOnlyFilters) {
+      return this.fetchProducts({
+        term: filters.term,
+        limit: filters.limit,
+      });
+    }
+
+    // Use the search query for collection/facet filtering
+    const query = `
+      query SearchVendureProducts($input: SearchInput!) {
+        search(input: $input) {
+          totalItems
+          items {
+            productId
+            productName
+            slug
+            productAsset {
+              id
+              preview
+            }
+            priceWithTax {
+              ... on SinglePrice {
+                value
+              }
+              ... on PriceRange {
+                min
+                max
+              }
+            }
+            currencyCode
+          }
+          collections {
+            collection {
+              id
+              name
+              slug
+            }
+            count
+          }
+          facetValues {
+            facetValue {
+              id
+              name
+              code
+            }
+            count
+          }
+        }
+      }
+    `;
+
+    const input: Record<string, any> = {
+      take: filters.limit || 25,
+      groupByProduct: true,
+    };
+
+    if (filters.term) {
+      input.term = filters.term;
+    }
+
+    if (filters.collectionSlug) {
+      input.collectionSlug = filters.collectionSlug;
+    } else if (filters.collectionId) {
+      input.collectionId = filters.collectionId;
+    }
+
+    if (filters.facetValueIds && filters.facetValueIds.length > 0) {
+      input.facetValueIds = filters.facetValueIds;
+    }
+
+    const data = await this.graphqlQuery(query, { input });
+    const searchResult = data?.search;
+
+    if (!searchResult || !searchResult.items) {
+      return {
+        totalItems: 0,
+        slugPointers: [],
+        products: []
+      };
+    }
+
+    // Extract slug pointers
+    const items = searchResult.items.map((item: any) => ({
+      id: item.productId,
+      name: item.productName,
+      slug: item.slug, // Pointer
+      asset: item.productAsset?.preview || null,
+      price: item.priceWithTax?.value || item.priceWithTax?.min || 0,
+      currency: item.currencyCode || 'USD'
+    }));
+
+    const slugs = items.map((item: any) => item.slug).filter(Boolean);
+
+    return {
+      totalItems: searchResult.totalItems || items.length,
+      slugPointers: slugs,
+      products: items,
+      availableCollections: searchResult.collections || [],
+      availableFacets: searchResult.facetValues || []
+    };
+  },
+
+  /**
+   * Fetch Collections list from Vendure
+   */
+  async getVendureCollections() {
+    const query = `
+      query GetVendureCollections {
+        collections {
+          items {
+            id
+            name
+            slug
+            parent {
+              id
+              name
+            }
+          }
+        }
+      }
+    `;
+
+    const data = await this.graphqlQuery(query);
+    return data?.collections?.items || [];
+  },
+
+  /**
+   * Fetch Facets list from Vendure
+   */
+  async getVendureFacets() {
+    const query = `
+      query GetVendureFacets {
+        facets {
+          items {
+            id
+            name
+            code
+            values {
+              id
+              name
+              code
+            }
+          }
+        }
+      }
+    `;
+
+    const data = await this.graphqlQuery(query);
+    return data?.facets?.items || [];
+  },
+
+  /**
+   * Resolve specific product slug pointers from Vendure.
+   * Uses the products query with slug filter for accurate matching.
+   */
+  async resolveSlugs(slugs: string[]) {
+    if (!slugs || slugs.length === 0) return [];
+
+    const resolved: any[] = [];
+    for (const slug of slugs) {
+      const query = `
+        query ResolveProductSlug($slug: String!) {
+          products(options: { filter: { slug: { eq: $slug } }, take: 1 }) {
+            items {
+              id
+              name
+              slug
+              featuredAsset {
+                id
+                preview
+              }
+              variants {
+                priceWithTax
+                currencyCode
+              }
+            }
+          }
+        }
+      `;
+
+      const data = await this.graphqlQuery(query, { slug });
+      const items = data?.products?.items;
+
+      if (items && items.length > 0) {
+        const item = items[0];
+        resolved.push({
+          id: item.id,
+          name: item.name,
+          slug: item.slug,
+          asset: item.featuredAsset?.preview || null,
+          price: item.variants?.[0]?.priceWithTax || 0,
+          currency: item.variants?.[0]?.currencyCode || 'USD',
+        });
+      } else {
+        resolved.push({ slug, name: slug, pointerOnly: true });
+      }
+    }
+    return resolved;
+  }
+});
+</file>
+
+<file path="src/api/.gitkeep">
+
+</file>
+
+<file path="src/components/carousel/hero-asset.json">
+{
+  "collectionName": "components_carousel_hero_assets",
+  "info": {
+    "displayName": "Hero Asset",
+    "icon": "picture",
+    "description": "Individual hero image slide with optional title, subtitle, CTA button, link, and mobile image override"
+  },
+  "options": {},
+  "attributes": {
+    "preview": {
+      "type": "media",
+      "multiple": false,
+      "required": false,
+      "allowedTypes": [
+        "images"
+      ]
+    },
+    "mobileImage": {
+      "type": "media",
+      "multiple": false,
+      "required": false,
+      "allowedTypes": [
+        "images"
+      ]
+    },
+    "alt": {
+      "type": "string"
+    },
+    "title": {
+      "type": "string"
+    },
+    "subtitle": {
+      "type": "string"
+    },
+    "buttonText": {
+      "type": "string"
+    },
+    "link": {
+      "type": "string"
+    }
+  }
+}
+</file>
+
+<file path="src/components/carousel/hero-carousel.json">
+{
+  "collectionName": "components_carousel_hero_carousels",
+  "info": {
+    "displayName": "Hero Carousel",
+    "icon": "slideshow",
+    "description": "Hero Carousel component with single list of slides and presentation controls"
+  },
+  "options": {},
+  "attributes": {
+    "slides": {
+      "type": "component",
+      "repeatable": true,
+      "component": "carousel.hero-asset"
+    },
+    "autoPlay": {
+      "type": "boolean",
+      "default": true
+    },
+    "autoPlayInterval": {
+      "type": "integer",
+      "default": 5000
+    },
+    "transitionDuration": {
+      "type": "integer",
+      "default": 1000
+    },
+    "showDots": {
+      "type": "boolean",
+      "default": true
+    },
+    "showArrows": {
+      "type": "boolean",
+      "default": true
+    },
+    "pauseOnHover": {
+      "type": "boolean",
+      "default": true
+    }
+  }
+}
+</file>
+
+<file path="src/components/carousel/hero-collection.json">
+{
+  "collectionName": "components_carousel_hero_collections",
+  "info": {
+    "displayName": "Hero Collection",
+    "icon": "folder",
+    "description": "Collection of hero image assets for specific device breakpoint slugs"
+  },
+  "options": {},
+  "attributes": {
+    "slug": {
+      "type": "enumeration",
+      "enum": [
+        "1920x1080",
+        "1080x1280",
+        "1080x2048"
+      ],
+      "required": true,
+      "default": "1920x1080"
+    },
+    "assets": {
+      "type": "component",
+      "repeatable": true,
+      "component": "carousel.hero-asset"
+    }
+  }
+}
+</file>
+
+<file path="src/components/navigation/footer-column.json">
+{
+  "collectionName": "components_navigation_footer_columns",
+  "info": {
+    "displayName": "Footer Column",
+    "icon": "list",
+    "description": "Column of links in footer navigation"
+  },
+  "options": {},
+  "attributes": {
+    "title": {
+      "type": "string",
+      "required": true
+    },
+    "links": {
+      "type": "component",
+      "repeatable": true,
+      "component": "navigation.link-item"
+    }
+  }
+}
+</file>
+
+<file path="src/components/navigation/header-top-bar.json">
+{
+  "collectionName": "components_navigation_header_top_bars",
+  "info": {
+    "displayName": "Header Top Bar",
+    "icon": "megaphone",
+    "description": "Header announcement top bar with auto-scrolling announcements"
+  },
+  "options": {},
+  "attributes": {
+    "enabled": {
+      "type": "boolean",
+      "default": true
+    },
+    "autoScrollInterval": {
+      "type": "integer",
+      "default": 4
+    },
+    "announcements": {
+      "type": "component",
+      "repeatable": true,
+      "component": "navigation.top-bar-item"
+    }
+  }
+}
+</file>
+
+<file path="src/components/navigation/link-item.json">
+{
+  "collectionName": "components_navigation_link_items",
+  "info": {
+    "displayName": "Link Item",
+    "icon": "link",
+    "description": "Navigation link item with title and URL"
+  },
+  "options": {},
+  "attributes": {
+    "title": {
+      "type": "string",
+      "required": true
+    },
+    "url": {
+      "type": "string",
+      "required": true
+    },
+    "isExternal": {
+      "type": "boolean",
+      "default": false
+    },
+    "badgeText": {
+      "type": "string"
+    }
+  }
+}
+</file>
+
+<file path="src/components/navigation/nav-category.json">
+{
+  "collectionName": "components_navigation_nav_categories",
+  "info": {
+    "displayName": "Nav Category / Main Group",
+    "icon": "folder",
+    "description": "Main category containing sub-category sections"
+  },
+  "options": {},
+  "attributes": {
+    "title": {
+      "type": "string",
+      "required": true
+    },
+    "url": {
+      "type": "string"
+    },
+    "isExternal": {
+      "type": "boolean",
+      "default": false
+    },
+    "sections": {
+      "type": "component",
+      "repeatable": true,
+      "component": "navigation.nav-section"
+    }
+  }
+}
+</file>
+
+<file path="src/components/navigation/nav-section.json">
+{
+  "collectionName": "components_navigation_nav_sections",
+  "info": {
+    "displayName": "Nav Section / Sub Category",
+    "icon": "layer",
+    "description": "Sub-category section containing links"
+  },
+  "options": {},
+  "attributes": {
+    "title": {
+      "type": "string",
+      "required": true
+    },
+    "url": {
+      "type": "string"
+    },
+    "isExternal": {
+      "type": "boolean",
+      "default": false
+    },
+    "items": {
+      "type": "component",
+      "repeatable": true,
+      "component": "navigation.link-item"
+    }
+  }
+}
+</file>
+
+<file path="src/components/navigation/nav-tab.json">
+{
+  "collectionName": "components_navigation_nav_tabs",
+  "info": {
+    "displayName": "Nav Tab / Header Dropdown",
+    "icon": "bulletList",
+    "description": "Navigation tab in header bar, can be dropdown or direct link"
+  },
+  "options": {},
+  "attributes": {
+    "tabName": {
+      "type": "string",
+      "required": true
+    },
+    "type": {
+      "type": "enumeration",
+      "default": "dropdown",
+      "enum": [
+        "dropdown",
+        "direct_link"
+      ]
+    },
+    "url": {
+      "type": "string"
+    },
+    "onlyFetchFromVendure": {
+      "type": "boolean"
+    },
+    "showManualListFirst": {
+      "type": "boolean",
+      "conditions": {
+        "visible": {
+          "==": [
+            {
+              "var": "onlyFetchFromVendure"
+            },
+            false
+          ]
+        }
+      }
+    },
+    "isExternal": {
+      "type": "boolean",
+      "default": false
+    },
+    "categories": {
+      "type": "component",
+      "conditions": {
+        "visible": {
+          "==": [
+            {
+              "var": "onlyFetchFromVendure"
+            },
+            false
+          ]
+        }
+      },
+      "component": "navigation.nav-category",
+      "repeatable": true
+    },
+    "collectionSlugsVendure": {
+      "type": "string",
+      "unique": false,
+      "regex": "   ^[a-z0-9]+(-[a-z0-9]+)*$"
+    }
+  }
+}
+</file>
+
+<file path="src/components/navigation/social-link.json">
+{
+  "collectionName": "components_navigation_social_links",
+  "info": {
+    "displayName": "Social Link",
+    "icon": "share-alt",
+    "description": "Social media platform link with icon"
+  },
+  "options": {},
+  "attributes": {
+    "name": {
+      "type": "string",
+      "required": true
+    },
+    "url": {
+      "type": "string",
+      "required": true
+    },
+    "iconName": {
+      "type": "string"
+    },
+    "iconImage": {
+      "type": "media",
+      "multiple": false,
+      "required": false,
+      "allowedTypes": ["images"]
+    }
+  }
+}
+</file>
+
+<file path="src/components/navigation/top-bar-item.json">
+{
+  "collectionName": "components_navigation_top_bar_items",
+  "info": {
+    "displayName": "Top Bar Item",
+    "icon": "megaphone",
+    "description": "Individual announcement entry for header top bar"
+  },
+  "options": {},
+  "attributes": {
+    "announcementText": {
+      "type": "string",
+      "required": true
+    },
+    "linkText": {
+      "type": "string"
+    },
+    "linkUrl": {
+      "type": "string"
+    }
+  }
+}
+</file>
+
+<file path="src/components/navigation/user-menu.json">
+{
+  "collectionName": "components_navigation_user_menus",
+  "info": {
+    "displayName": "User Account Menu",
+    "icon": "user",
+    "description": "User profile menu dropdown settings and navigation links"
+  },
+  "options": {},
+  "attributes": {
+    "showUserDropdown": {
+      "type": "boolean",
+      "default": true
+    },
+    "guestTitle": {
+      "type": "string",
+      "default": "Welcome to Badmos Fashion"
+    },
+    "joinClanButtonLabel": {
+      "type": "string",
+      "default": "Join The Clan"
+    },
+    "joinClanButtonUrl": {
+      "type": "string",
+      "default": "/login"
+    },
+    "signOutLabel": {
+      "type": "string",
+      "default": "Sign Out"
+    },
+    "userLinks": {
+      "type": "component",
+      "repeatable": true,
+      "component": "navigation.link-item"
+    }
+  }
+}
+</file>
+
+<file path="src/components/sections/product-list-section.json">
+{
+  "collectionName": "components_sections_product_list_sections",
+  "info": {
+    "displayName": "Product List Section",
+    "icon": "shopping-cart",
+    "description": "Vendure Product List component storing slug pointers via interactive admin selector"
+  },
+  "options": {},
+  "attributes": {
+    "title": {
+      "type": "string",
+      "default": "Featured Products"
+    },
+    "caption": {
+      "type": "string"
+    },
+    "productSlugs": {
+      "type": "customField",
+      "customField": "global::vendure-product-selector"
+    },
+    "categorySlugs": {
+      "type": "json"
+    }
+  }
+}
+</file>
+
+<file path="src/extensions/.gitkeep">
+
+</file>
+
+<file path="src/index.ts">
+import type { Core } from '@strapi/strapi';
+
+export default {
+  register({ strapi }: { strapi: any }) {
+    strapi.customFields.register({
+      name: 'vendure-product-selector',
+      type: 'json',
+    });
+  },
+
+  async bootstrap({ strapi }: { strapi: Core.Strapi }) {
+    try {
+      const publicRole = await strapi
+        .query('plugin::users-permissions.role')
+        .findOne({ where: { type: 'public' } });
+
+      if (publicRole) {
+        // Grant permissions for Header
+        const headerPermission = await strapi
+          .query('plugin::users-permissions.permission')
+          .findOne({
+            where: {
+              role: publicRole.id,
+              action: 'api::header.header.find',
+            },
+          });
+
+        if (!headerPermission) {
+          await strapi
+            .query('plugin::users-permissions.permission')
+            .create({
+              data: {
+                action: 'api::header.header.find',
+                role: publicRole.id,
+              },
+            });
+          strapi.log.info('Auto-granted public find permission for Header single type');
+        }
+
+        // Grant permissions for Footer
+        const footerPermission = await strapi
+          .query('plugin::users-permissions.permission')
+          .findOne({
+            where: {
+              role: publicRole.id,
+              action: 'api::footer.footer.find',
+            },
+          });
+
+        if (!footerPermission) {
+          await strapi
+            .query('plugin::users-permissions.permission')
+            .create({
+              data: {
+                action: 'api::footer.footer.find',
+                role: publicRole.id,
+              },
+            });
+          strapi.log.info('Auto-granted public find permission for Footer single type');
+        }
+      }
+
+      // Reset cached Content Manager edit view layout for Footer so new schema fields (copyrightText) appear immediately
+      try {
+        const cmStore = strapi.store({
+          type: 'plugin',
+          name: 'content_manager',
+          key: 'configuration_single_types::api::footer.footer',
+        });
+        await cmStore.delete();
+        strapi.log.info('Reset Content Manager layout cache for Footer single type');
+      } catch (err) {
+        // Ignore if store key does not exist yet
+      }
+
+      // 2. Pre-populate default Header content if empty
+      const existingHeader = await strapi.documents('api::header.header').findFirst({
+        populate: ['leftNavTabs', 'topBar', 'userMenu'],
+      });
+
+      const defaultHeaderData = {
+        logoText: 'BADMOS',
+        logoLink: '/',
+        showCartButton: true,
+        topBar: {
+          enabled: true,
+          autoScrollInterval: 4,
+          announcements: [
+            {
+              announcementText: 'Welcome to Badmos Fashion! Free shipping on orders over $100.',
+              linkUrl: '/shop',
+              linkText: 'Shop Now',
+            },
+            {
+              announcementText: 'New Summer Collection Out Now! Explore the latest styles.',
+              linkUrl: '/collections/new-arrivals',
+              linkText: 'Explore',
+            },
+            {
+              announcementText: 'Get exclusive perks and discounts when you Join The Clan.',
+              linkUrl: '/login',
+              linkText: 'Join Now',
+            },
+          ],
+        },
+        userMenu: {
+          showUserDropdown: true,
+          guestTitle: 'Welcome to Badmos Fashion',
+          joinClanButtonLabel: 'Join The Clan',
+          joinClanButtonUrl: '/login',
+          signOutLabel: 'Sign Out',
+          userLinks: [
+            { title: 'My Account', url: '/account', isExternal: false },
+            { title: 'My Orders', url: '/orders', isExternal: false },
+            { title: 'Wishlist', url: '/wishlist', isExternal: false },
+          ],
+        },
+        leftNavTabs: [
+          {
+            tabName: 'Shop By Categories',
+            type: 'dropdown',
+            url: '/categories',
+            categories: [
+              {
+                title: 'Men',
+                url: '/men',
+                sections: [
+                  {
+                    title: 'Top Wear',
+                    url: '/men/top-wear',
+                    items: [
+                      { title: 'T-Shirts', url: '/men/top-wear/t-shirts' },
+                      { title: 'Casual Shirts', url: '/men/top-wear/shirts' },
+                    ],
+                  },
+                ],
+              },
+              {
+                title: 'Women',
+                url: '/women',
+                sections: [
+                  {
+                    title: 'Ethnic Wear',
+                    url: '/women/ethnic-wear',
+                    items: [
+                      { title: 'Dresses', url: '/women/dresses' },
+                      { title: 'Sarees', url: '/women/sarees' },
+                    ],
+                  },
+                ],
+              },
+            ],
+          },
+          {
+            tabName: 'Shop By Collections',
+            type: 'dropdown',
+            url: '/collections',
+            categories: [
+              {
+                title: 'New Arrivals',
+                url: '/collections/new-arrivals',
+                sections: [],
+              },
+              {
+                title: 'Best Sellers',
+                url: '/collections/best-sellers',
+                sections: [],
+              },
+            ],
+          },
+        ],
+      };
+
+      if (existingHeader) {
+        await strapi.documents('api::header.header').update({
+          documentId: existingHeader.documentId,
+          data: defaultHeaderData as any,
+          status: 'published',
+        });
+      } else {
+        await strapi.documents('api::header.header').create({
+          data: defaultHeaderData as any,
+          status: 'published',
+        });
+      }
+
+      // 3. Pre-populate default Footer content if empty
+      const existingFooter = await strapi.documents('api::footer.footer').findFirst({
+        populate: ['columns', 'socialLinks'],
+      });
+
+      const defaultFooterData = {
+        taglineText: 'Embrace your space journey NOW!!!',
+        socialLinks: [
+          { name: 'Instagram', url: 'https://instagram.com', iconName: 'ri:instagram-line' },
+          { name: 'Twitter', url: 'https://twitter.com', iconName: 'ri:twitter-x-line' },
+          { name: 'Facebook', url: 'https://facebook.com', iconName: 'ri:facebook-fill' },
+        ],
+        columns: [
+          {
+            title: 'SHOP',
+            links: [
+              { title: 'Men', url: '/men', isExternal: false },
+              { title: 'Women', url: '/women', isExternal: false },
+              { title: 'New Arrivals', url: '/collections/new-arrivals', isExternal: false },
+              { title: 'Best Sellers', url: '/collections/best-sellers', isExternal: false },
+            ],
+          },
+          {
+            title: 'CUSTOMER CARE',
+            links: [
+              { title: 'Contact Us', url: '/contact', isExternal: false },
+              { title: 'Shipping Policy', url: '/shipping-policy', isExternal: false },
+              { title: 'Returns & Exchanges', url: '/returns', isExternal: false },
+              { title: 'FAQs', url: '/faq', isExternal: false },
+            ],
+          },
+          {
+            title: 'COMPANY',
+            links: [
+              { title: 'About Us', url: '/about', isExternal: false },
+              { title: 'Careers', url: '/careers', isExternal: false },
+              { title: 'Terms of Service', url: '/terms', isExternal: false },
+              { title: 'Privacy Policy', url: '/privacy', isExternal: false },
+            ],
+          },
+        ],
+        aboutTitle: 'ABOUT BADMOS FASHION',
+        aboutDescription: 'Badmos Fashion is a luxury streetwear brand bringing high-end aesthetics, premium craftsmanship, and futuristic designs to your everyday wardrobe.',
+        copyrightText: '© {year} BADMOS FASHION. ALL RIGHTS RESERVED.',
+      };
+
+      if (existingFooter) {
+        await strapi.documents('api::footer.footer').update({
+          documentId: existingFooter.documentId,
+          data: defaultFooterData as any,
+          status: 'published',
+        });
+      } else {
+        await strapi.documents('api::footer.footer').create({
+          data: defaultFooterData as any,
+          status: 'published',
+        });
+      }
+      strapi.log.info('Pre-populated default Footer single type content');
+
+    } catch (err) {
+      strapi.log.error('Error during Strapi bootstrap:', err);
+    }
+  },
+};
+</file>
+
+<file path="types/generated/components.d.ts">
+import type { Schema, Struct } from '@strapi/strapi';
+
+export interface CarouselHeroAsset extends Struct.ComponentSchema {
+  collectionName: 'components_carousel_hero_assets';
+  info: {
+    description: 'Individual hero image slide with optional title, subtitle, CTA button, link, and mobile image override';
+    displayName: 'Hero Asset';
+    icon: 'picture';
+  };
+  attributes: {
+    alt: Schema.Attribute.String;
+    buttonText: Schema.Attribute.String;
+    link: Schema.Attribute.String;
+    mobileImage: Schema.Attribute.Media<'images'>;
+    preview: Schema.Attribute.Media<'images'>;
+    subtitle: Schema.Attribute.String;
+    title: Schema.Attribute.String;
+  };
+}
+
+export interface CarouselHeroCarousel extends Struct.ComponentSchema {
+  collectionName: 'components_carousel_hero_carousels';
+  info: {
+    description: 'Hero Carousel component with single list of slides and presentation controls';
+    displayName: 'Hero Carousel';
+    icon: 'slideshow';
+  };
+  attributes: {
+    autoPlay: Schema.Attribute.Boolean & Schema.Attribute.DefaultTo<true>;
+    autoPlayInterval: Schema.Attribute.Integer &
+      Schema.Attribute.DefaultTo<5000>;
+    pauseOnHover: Schema.Attribute.Boolean & Schema.Attribute.DefaultTo<true>;
+    showArrows: Schema.Attribute.Boolean & Schema.Attribute.DefaultTo<true>;
+    showDots: Schema.Attribute.Boolean & Schema.Attribute.DefaultTo<true>;
+    slides: Schema.Attribute.Component<'carousel.hero-asset', true>;
+    transitionDuration: Schema.Attribute.Integer &
+      Schema.Attribute.DefaultTo<1000>;
+  };
+}
+
+export interface CarouselHeroCollection extends Struct.ComponentSchema {
+  collectionName: 'components_carousel_hero_collections';
+  info: {
+    description: 'Collection of hero image assets for specific device breakpoint slugs';
+    displayName: 'Hero Collection';
+    icon: 'folder';
+  };
+  attributes: {
+    assets: Schema.Attribute.Component<'carousel.hero-asset', true>;
+    slug: Schema.Attribute.Enumeration<
+      ['1920x1080', '1080x1280', '1080x2048']
+    > &
+      Schema.Attribute.Required &
+      Schema.Attribute.DefaultTo<'1920x1080'>;
+  };
+}
+
+export interface NavigationFooterColumn extends Struct.ComponentSchema {
+  collectionName: 'components_navigation_footer_columns';
+  info: {
+    description: 'Column of links in footer navigation';
+    displayName: 'Footer Column';
+    icon: 'list';
+  };
+  attributes: {
+    links: Schema.Attribute.Component<'navigation.link-item', true>;
+    title: Schema.Attribute.String & Schema.Attribute.Required;
+  };
+}
+
+export interface NavigationHeaderTopBar extends Struct.ComponentSchema {
+  collectionName: 'components_navigation_header_top_bars';
+  info: {
+    description: 'Header announcement top bar with auto-scrolling announcements';
+    displayName: 'Header Top Bar';
+    icon: 'megaphone';
+  };
+  attributes: {
+    announcements: Schema.Attribute.Component<'navigation.top-bar-item', true>;
+    autoScrollInterval: Schema.Attribute.Integer &
+      Schema.Attribute.DefaultTo<4>;
+    enabled: Schema.Attribute.Boolean & Schema.Attribute.DefaultTo<true>;
+  };
+}
+
+export interface NavigationLinkItem extends Struct.ComponentSchema {
+  collectionName: 'components_navigation_link_items';
+  info: {
+    description: 'Navigation link item with title and URL';
+    displayName: 'Link Item';
+    icon: 'link';
+  };
+  attributes: {
+    badgeText: Schema.Attribute.String;
+    isExternal: Schema.Attribute.Boolean & Schema.Attribute.DefaultTo<false>;
+    title: Schema.Attribute.String & Schema.Attribute.Required;
+    url: Schema.Attribute.String & Schema.Attribute.Required;
+  };
+}
+
+export interface NavigationNavCategory extends Struct.ComponentSchema {
+  collectionName: 'components_navigation_nav_categories';
+  info: {
+    description: 'Main category containing sub-category sections';
+    displayName: 'Nav Category / Main Group';
+    icon: 'folder';
+  };
+  attributes: {
+    isExternal: Schema.Attribute.Boolean & Schema.Attribute.DefaultTo<false>;
+    sections: Schema.Attribute.Component<'navigation.nav-section', true>;
+    title: Schema.Attribute.String & Schema.Attribute.Required;
+    url: Schema.Attribute.String;
+  };
+}
+
+export interface NavigationNavSection extends Struct.ComponentSchema {
+  collectionName: 'components_navigation_nav_sections';
+  info: {
+    description: 'Sub-category section containing links';
+    displayName: 'Nav Section / Sub Category';
+    icon: 'layer';
+  };
+  attributes: {
+    isExternal: Schema.Attribute.Boolean & Schema.Attribute.DefaultTo<false>;
+    items: Schema.Attribute.Component<'navigation.link-item', true>;
+    title: Schema.Attribute.String & Schema.Attribute.Required;
+    url: Schema.Attribute.String;
+  };
+}
+
+export interface NavigationNavTab extends Struct.ComponentSchema {
+  collectionName: 'components_navigation_nav_tabs';
+  info: {
+    description: 'Navigation tab in header bar, can be dropdown or direct link';
+    displayName: 'Nav Tab / Header Dropdown';
+    icon: 'bulletList';
+  };
+  attributes: {
+    categories: Schema.Attribute.Component<'navigation.nav-category', true>;
+    collectionSlugsVendure: Schema.Attribute.String;
+    isExternal: Schema.Attribute.Boolean & Schema.Attribute.DefaultTo<false>;
+    onlyFetchFromVendure: Schema.Attribute.Boolean;
+    showManualListFirst: Schema.Attribute.Boolean;
+    tabName: Schema.Attribute.String & Schema.Attribute.Required;
+    type: Schema.Attribute.Enumeration<['dropdown', 'direct_link']> &
+      Schema.Attribute.DefaultTo<'dropdown'>;
+    url: Schema.Attribute.String;
+  };
+}
+
+export interface NavigationSocialLink extends Struct.ComponentSchema {
+  collectionName: 'components_navigation_social_links';
+  info: {
+    description: 'Social media platform link with icon';
+    displayName: 'Social Link';
+    icon: 'share-alt';
+  };
+  attributes: {
+    iconImage: Schema.Attribute.Media<'images'>;
+    iconName: Schema.Attribute.String;
+    name: Schema.Attribute.String & Schema.Attribute.Required;
+    url: Schema.Attribute.String & Schema.Attribute.Required;
+  };
+}
+
+export interface NavigationTopBarItem extends Struct.ComponentSchema {
+  collectionName: 'components_navigation_top_bar_items';
+  info: {
+    description: 'Individual announcement entry for header top bar';
+    displayName: 'Top Bar Item';
+    icon: 'megaphone';
+  };
+  attributes: {
+    announcementText: Schema.Attribute.String & Schema.Attribute.Required;
+    linkText: Schema.Attribute.String;
+    linkUrl: Schema.Attribute.String;
+  };
+}
+
+export interface NavigationUserMenu extends Struct.ComponentSchema {
+  collectionName: 'components_navigation_user_menus';
+  info: {
+    description: 'User profile menu dropdown settings and navigation links';
+    displayName: 'User Account Menu';
+    icon: 'user';
+  };
+  attributes: {
+    guestTitle: Schema.Attribute.String &
+      Schema.Attribute.DefaultTo<'Welcome to Badmos Fashion'>;
+    joinClanButtonLabel: Schema.Attribute.String &
+      Schema.Attribute.DefaultTo<'Join The Clan'>;
+    joinClanButtonUrl: Schema.Attribute.String &
+      Schema.Attribute.DefaultTo<'/login'>;
+    showUserDropdown: Schema.Attribute.Boolean &
+      Schema.Attribute.DefaultTo<true>;
+    signOutLabel: Schema.Attribute.String &
+      Schema.Attribute.DefaultTo<'Sign Out'>;
+    userLinks: Schema.Attribute.Component<'navigation.link-item', true>;
+  };
+}
+
+export interface SectionsProductListSection extends Struct.ComponentSchema {
+  collectionName: 'components_sections_product_list_sections';
+  info: {
+    description: 'Vendure Product List component storing slug pointers via interactive admin selector';
+    displayName: 'Product List Section';
+    icon: 'shopping-cart';
+  };
+  attributes: {
+    caption: Schema.Attribute.String;
+    categorySlugs: Schema.Attribute.JSON;
+    productSlugs: Schema.Attribute.JSON &
+      Schema.Attribute.CustomField<'global::vendure-product-selector'>;
+    title: Schema.Attribute.String &
+      Schema.Attribute.DefaultTo<'Featured Products'>;
+  };
+}
+
+declare module '@strapi/strapi' {
+  export namespace Public {
+    export interface ComponentSchemas {
+      'carousel.hero-asset': CarouselHeroAsset;
+      'carousel.hero-carousel': CarouselHeroCarousel;
+      'carousel.hero-collection': CarouselHeroCollection;
+      'navigation.footer-column': NavigationFooterColumn;
+      'navigation.header-top-bar': NavigationHeaderTopBar;
+      'navigation.link-item': NavigationLinkItem;
+      'navigation.nav-category': NavigationNavCategory;
+      'navigation.nav-section': NavigationNavSection;
+      'navigation.nav-tab': NavigationNavTab;
+      'navigation.social-link': NavigationSocialLink;
+      'navigation.top-bar-item': NavigationTopBarItem;
+      'navigation.user-menu': NavigationUserMenu;
+      'sections.product-list-section': SectionsProductListSection;
+    }
+  }
+}
+</file>
+
+<file path="types/generated/contentTypes.d.ts">
+import type { Schema, Struct } from '@strapi/strapi';
+
+export interface AdminApiToken extends Struct.CollectionTypeSchema {
+  collectionName: 'strapi_api_tokens';
+  info: {
+    description: '';
+    displayName: 'Api Token';
+    name: 'Api Token';
+    pluralName: 'api-tokens';
+    singularName: 'api-token';
+  };
+  options: {
+    draftAndPublish: false;
+  };
+  pluginOptions: {
+    'content-manager': {
+      visible: false;
+    };
+    'content-type-builder': {
+      visible: false;
+    };
+  };
+  attributes: {
+    accessKey: Schema.Attribute.String &
+      Schema.Attribute.Required &
+      Schema.Attribute.SetMinMaxLength<{
+        minLength: 1;
+      }>;
+    adminPermissions: Schema.Attribute.Relation<
+      'oneToMany',
+      'admin::permission'
+    >;
+    adminUserOwner: Schema.Attribute.Relation<'manyToOne', 'admin::user'>;
+    createdAt: Schema.Attribute.DateTime;
+    createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+    description: Schema.Attribute.String &
+      Schema.Attribute.SetMinMaxLength<{
+        minLength: 1;
+      }> &
+      Schema.Attribute.DefaultTo<''>;
+    encryptedKey: Schema.Attribute.Text &
+      Schema.Attribute.SetMinMaxLength<{
+        minLength: 1;
+      }>;
+    expiresAt: Schema.Attribute.DateTime;
+    kind: Schema.Attribute.Enumeration<['content-api', 'admin']> &
+      Schema.Attribute.Required &
+      Schema.Attribute.DefaultTo<'content-api'>;
+    lastUsedAt: Schema.Attribute.DateTime;
+    lifespan: Schema.Attribute.BigInteger;
+    locale: Schema.Attribute.String & Schema.Attribute.Private;
+    localizations: Schema.Attribute.Relation<'oneToMany', 'admin::api-token'> &
+      Schema.Attribute.Private;
+    name: Schema.Attribute.String &
+      Schema.Attribute.Required &
+      Schema.Attribute.Unique &
+      Schema.Attribute.SetMinMaxLength<{
+        minLength: 1;
+      }>;
+    permissions: Schema.Attribute.Relation<
+      'oneToMany',
+      'admin::api-token-permission'
+    >;
+    publishedAt: Schema.Attribute.DateTime;
+    type: Schema.Attribute.Enumeration<['read-only', 'full-access', 'custom']> &
+      Schema.Attribute.DefaultTo<'read-only'>;
+    updatedAt: Schema.Attribute.DateTime;
+    updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+  };
+}
+
+export interface AdminApiTokenPermission extends Struct.CollectionTypeSchema {
+  collectionName: 'strapi_api_token_permissions';
+  info: {
+    description: '';
+    displayName: 'API Token Permission';
+    name: 'API Token Permission';
+    pluralName: 'api-token-permissions';
+    singularName: 'api-token-permission';
+  };
+  options: {
+    draftAndPublish: false;
+  };
+  pluginOptions: {
+    'content-manager': {
+      visible: false;
+    };
+    'content-type-builder': {
+      visible: false;
+    };
+  };
+  attributes: {
+    action: Schema.Attribute.String &
+      Schema.Attribute.Required &
+      Schema.Attribute.SetMinMaxLength<{
+        minLength: 1;
+      }>;
+    createdAt: Schema.Attribute.DateTime;
+    createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+    locale: Schema.Attribute.String & Schema.Attribute.Private;
+    localizations: Schema.Attribute.Relation<
+      'oneToMany',
+      'admin::api-token-permission'
+    > &
+      Schema.Attribute.Private;
+    publishedAt: Schema.Attribute.DateTime;
+    token: Schema.Attribute.Relation<'manyToOne', 'admin::api-token'>;
+    updatedAt: Schema.Attribute.DateTime;
+    updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+  };
+}
+
+export interface AdminPermission extends Struct.CollectionTypeSchema {
+  collectionName: 'admin_permissions';
+  info: {
+    description: '';
+    displayName: 'Permission';
+    name: 'Permission';
+    pluralName: 'permissions';
+    singularName: 'permission';
+  };
+  options: {
+    draftAndPublish: false;
+  };
+  pluginOptions: {
+    'content-manager': {
+      visible: false;
+    };
+    'content-type-builder': {
+      visible: false;
+    };
+  };
+  attributes: {
+    action: Schema.Attribute.String &
+      Schema.Attribute.Required &
+      Schema.Attribute.SetMinMaxLength<{
+        minLength: 1;
+      }>;
+    actionParameters: Schema.Attribute.JSON & Schema.Attribute.DefaultTo<{}>;
+    apiToken: Schema.Attribute.Relation<'manyToOne', 'admin::api-token'>;
+    conditions: Schema.Attribute.JSON & Schema.Attribute.DefaultTo<[]>;
+    createdAt: Schema.Attribute.DateTime;
+    createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+    locale: Schema.Attribute.String & Schema.Attribute.Private;
+    localizations: Schema.Attribute.Relation<'oneToMany', 'admin::permission'> &
+      Schema.Attribute.Private;
+    properties: Schema.Attribute.JSON & Schema.Attribute.DefaultTo<{}>;
+    publishedAt: Schema.Attribute.DateTime;
+    role: Schema.Attribute.Relation<'manyToOne', 'admin::role'>;
+    subject: Schema.Attribute.String &
+      Schema.Attribute.SetMinMaxLength<{
+        minLength: 1;
+      }>;
+    updatedAt: Schema.Attribute.DateTime;
+    updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+  };
+}
+
+export interface AdminRole extends Struct.CollectionTypeSchema {
+  collectionName: 'admin_roles';
+  info: {
+    description: '';
+    displayName: 'Role';
+    name: 'Role';
+    pluralName: 'roles';
+    singularName: 'role';
+  };
+  options: {
+    draftAndPublish: false;
+  };
+  pluginOptions: {
+    'content-manager': {
+      visible: false;
+    };
+    'content-type-builder': {
+      visible: false;
+    };
+  };
+  attributes: {
+    code: Schema.Attribute.String &
+      Schema.Attribute.Required &
+      Schema.Attribute.Unique &
+      Schema.Attribute.SetMinMaxLength<{
+        minLength: 1;
+      }>;
+    createdAt: Schema.Attribute.DateTime;
+    createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+    description: Schema.Attribute.String;
+    locale: Schema.Attribute.String & Schema.Attribute.Private;
+    localizations: Schema.Attribute.Relation<'oneToMany', 'admin::role'> &
+      Schema.Attribute.Private;
+    name: Schema.Attribute.String &
+      Schema.Attribute.Required &
+      Schema.Attribute.Unique &
+      Schema.Attribute.SetMinMaxLength<{
+        minLength: 1;
+      }>;
+    permissions: Schema.Attribute.Relation<'oneToMany', 'admin::permission'>;
+    publishedAt: Schema.Attribute.DateTime;
+    updatedAt: Schema.Attribute.DateTime;
+    updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+    users: Schema.Attribute.Relation<'manyToMany', 'admin::user'>;
+  };
+}
+
+export interface AdminSession extends Struct.CollectionTypeSchema {
+  collectionName: 'strapi_sessions';
+  info: {
+    description: 'Session Manager storage';
+    displayName: 'Session';
+    name: 'Session';
+    pluralName: 'sessions';
+    singularName: 'session';
+  };
+  options: {
+    draftAndPublish: false;
+  };
+  pluginOptions: {
+    'content-manager': {
+      visible: false;
+    };
+    'content-type-builder': {
+      visible: false;
+    };
+    i18n: {
+      localized: false;
+    };
+  };
+  attributes: {
+    absoluteExpiresAt: Schema.Attribute.DateTime & Schema.Attribute.Private;
+    childId: Schema.Attribute.String & Schema.Attribute.Private;
+    createdAt: Schema.Attribute.DateTime;
+    createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+    deviceId: Schema.Attribute.String &
+      Schema.Attribute.Required &
+      Schema.Attribute.Private;
+    expiresAt: Schema.Attribute.DateTime &
+      Schema.Attribute.Required &
+      Schema.Attribute.Private;
+    locale: Schema.Attribute.String & Schema.Attribute.Private;
+    localizations: Schema.Attribute.Relation<'oneToMany', 'admin::session'> &
+      Schema.Attribute.Private;
+    metadata: Schema.Attribute.JSON & Schema.Attribute.Private;
+    origin: Schema.Attribute.String &
+      Schema.Attribute.Required &
+      Schema.Attribute.Private;
+    publishedAt: Schema.Attribute.DateTime;
+    sessionId: Schema.Attribute.String &
+      Schema.Attribute.Required &
+      Schema.Attribute.Private &
+      Schema.Attribute.Unique;
+    status: Schema.Attribute.String & Schema.Attribute.Private;
+    type: Schema.Attribute.String & Schema.Attribute.Private;
+    updatedAt: Schema.Attribute.DateTime;
+    updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+    userId: Schema.Attribute.String &
+      Schema.Attribute.Required &
+      Schema.Attribute.Private;
+  };
+}
+
+export interface AdminTransferToken extends Struct.CollectionTypeSchema {
+  collectionName: 'strapi_transfer_tokens';
+  info: {
+    description: '';
+    displayName: 'Transfer Token';
+    name: 'Transfer Token';
+    pluralName: 'transfer-tokens';
+    singularName: 'transfer-token';
+  };
+  options: {
+    draftAndPublish: false;
+  };
+  pluginOptions: {
+    'content-manager': {
+      visible: false;
+    };
+    'content-type-builder': {
+      visible: false;
+    };
+  };
+  attributes: {
+    accessKey: Schema.Attribute.String &
+      Schema.Attribute.Required &
+      Schema.Attribute.SetMinMaxLength<{
+        minLength: 1;
+      }>;
+    createdAt: Schema.Attribute.DateTime;
+    createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+    description: Schema.Attribute.String &
+      Schema.Attribute.SetMinMaxLength<{
+        minLength: 1;
+      }> &
+      Schema.Attribute.DefaultTo<''>;
+    expiresAt: Schema.Attribute.DateTime;
+    lastUsedAt: Schema.Attribute.DateTime;
+    lifespan: Schema.Attribute.BigInteger;
+    locale: Schema.Attribute.String & Schema.Attribute.Private;
+    localizations: Schema.Attribute.Relation<
+      'oneToMany',
+      'admin::transfer-token'
+    > &
+      Schema.Attribute.Private;
+    name: Schema.Attribute.String &
+      Schema.Attribute.Required &
+      Schema.Attribute.Unique &
+      Schema.Attribute.SetMinMaxLength<{
+        minLength: 1;
+      }>;
+    permissions: Schema.Attribute.Relation<
+      'oneToMany',
+      'admin::transfer-token-permission'
+    >;
+    publishedAt: Schema.Attribute.DateTime;
+    updatedAt: Schema.Attribute.DateTime;
+    updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+  };
+}
+
+export interface AdminTransferTokenPermission
+  extends Struct.CollectionTypeSchema {
+  collectionName: 'strapi_transfer_token_permissions';
+  info: {
+    description: '';
+    displayName: 'Transfer Token Permission';
+    name: 'Transfer Token Permission';
+    pluralName: 'transfer-token-permissions';
+    singularName: 'transfer-token-permission';
+  };
+  options: {
+    draftAndPublish: false;
+  };
+  pluginOptions: {
+    'content-manager': {
+      visible: false;
+    };
+    'content-type-builder': {
+      visible: false;
+    };
+  };
+  attributes: {
+    action: Schema.Attribute.String &
+      Schema.Attribute.Required &
+      Schema.Attribute.SetMinMaxLength<{
+        minLength: 1;
+      }>;
+    createdAt: Schema.Attribute.DateTime;
+    createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+    locale: Schema.Attribute.String & Schema.Attribute.Private;
+    localizations: Schema.Attribute.Relation<
+      'oneToMany',
+      'admin::transfer-token-permission'
+    > &
+      Schema.Attribute.Private;
+    publishedAt: Schema.Attribute.DateTime;
+    token: Schema.Attribute.Relation<'manyToOne', 'admin::transfer-token'>;
+    updatedAt: Schema.Attribute.DateTime;
+    updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+  };
+}
+
+export interface AdminUser extends Struct.CollectionTypeSchema {
+  collectionName: 'admin_users';
+  info: {
+    description: '';
+    displayName: 'User';
+    name: 'User';
+    pluralName: 'users';
+    singularName: 'user';
+  };
+  options: {
+    draftAndPublish: false;
+  };
+  pluginOptions: {
+    'content-manager': {
+      visible: false;
+    };
+    'content-type-builder': {
+      visible: false;
+    };
+  };
+  attributes: {
+    apiTokens: Schema.Attribute.Relation<'oneToMany', 'admin::api-token'> &
+      Schema.Attribute.Private;
+    blocked: Schema.Attribute.Boolean &
+      Schema.Attribute.Private &
+      Schema.Attribute.DefaultTo<false>;
+    createdAt: Schema.Attribute.DateTime;
+    createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+    email: Schema.Attribute.Email &
+      Schema.Attribute.Required &
+      Schema.Attribute.Private &
+      Schema.Attribute.Unique &
+      Schema.Attribute.SetMinMaxLength<{
+        minLength: 6;
+      }>;
+    firstname: Schema.Attribute.String &
+      Schema.Attribute.SetMinMaxLength<{
+        minLength: 1;
+      }>;
+    isActive: Schema.Attribute.Boolean &
+      Schema.Attribute.Private &
+      Schema.Attribute.DefaultTo<false>;
+    lastname: Schema.Attribute.String &
+      Schema.Attribute.SetMinMaxLength<{
+        minLength: 1;
+      }>;
+    locale: Schema.Attribute.String & Schema.Attribute.Private;
+    localizations: Schema.Attribute.Relation<'oneToMany', 'admin::user'> &
+      Schema.Attribute.Private;
+    password: Schema.Attribute.Password &
+      Schema.Attribute.Private &
+      Schema.Attribute.SetMinMaxLength<{
+        minLength: 6;
+      }>;
+    preferedLanguage: Schema.Attribute.String;
+    publishedAt: Schema.Attribute.DateTime;
+    registrationToken: Schema.Attribute.String & Schema.Attribute.Private;
+    resetPasswordToken: Schema.Attribute.String & Schema.Attribute.Private;
+    resetPasswordTokenExpiresAt: Schema.Attribute.DateTime &
+      Schema.Attribute.Private;
+    roles: Schema.Attribute.Relation<'manyToMany', 'admin::role'> &
+      Schema.Attribute.Private;
+    updatedAt: Schema.Attribute.DateTime;
+    updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+    username: Schema.Attribute.String;
+  };
+}
+
+export interface ApiFooterFooter extends Struct.SingleTypeSchema {
+  collectionName: 'footers';
+  info: {
+    description: 'Footer single type schema managing tagline, social links, navigation columns, about section, and copyright text';
+    displayName: 'Footer Navigation';
+    pluralName: 'footers';
+    singularName: 'footer';
+  };
+  options: {
+    draftAndPublish: true;
+  };
+  attributes: {
+    aboutDescription: Schema.Attribute.Text;
+    aboutTitle: Schema.Attribute.String;
+    columns: Schema.Attribute.Component<'navigation.footer-column', true>;
+    copyrightText: Schema.Attribute.String;
+    createdAt: Schema.Attribute.DateTime;
+    createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+    locale: Schema.Attribute.String & Schema.Attribute.Private;
+    localizations: Schema.Attribute.Relation<
+      'oneToMany',
+      'api::footer.footer'
+    > &
+      Schema.Attribute.Private;
+    publishedAt: Schema.Attribute.DateTime;
+    socialLinks: Schema.Attribute.Component<'navigation.social-link', true>;
+    taglineText: Schema.Attribute.Text;
+    updatedAt: Schema.Attribute.DateTime;
+    updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+  };
+}
+
+export interface ApiHeaderHeader extends Struct.SingleTypeSchema {
+  collectionName: 'headers';
+  info: {
+    description: 'Header navigation bar schema for Badmos Fashion';
+    displayName: 'Header / Navigation Bar';
+    pluralName: 'headers';
+    singularName: 'header';
+  };
+  options: {
+    draftAndPublish: true;
+  };
+  attributes: {
+    createdAt: Schema.Attribute.DateTime;
+    createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+    leftNavTabs: Schema.Attribute.Component<'navigation.nav-tab', true>;
+    locale: Schema.Attribute.String & Schema.Attribute.Private;
+    localizations: Schema.Attribute.Relation<
+      'oneToMany',
+      'api::header.header'
+    > &
+      Schema.Attribute.Private;
+    logoImage: Schema.Attribute.Media<'images'>;
+    logoLink: Schema.Attribute.String & Schema.Attribute.DefaultTo<'/'>;
+    logoText: Schema.Attribute.String & Schema.Attribute.DefaultTo<'BADMOS'>;
+    publishedAt: Schema.Attribute.DateTime;
+    showCartButton: Schema.Attribute.Boolean & Schema.Attribute.DefaultTo<true>;
+    topBar: Schema.Attribute.Component<'navigation.header-top-bar', false>;
+    updatedAt: Schema.Attribute.DateTime;
+    updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+    userMenu: Schema.Attribute.Component<'navigation.user-menu', false>;
+  };
+}
+
+export interface ApiPagePage extends Struct.CollectionTypeSchema {
+  collectionName: 'pages';
+  info: {
+    description: 'Dynamic page builder for Badmos Fashion pages';
+    displayName: 'Page';
+    pluralName: 'pages';
+    singularName: 'page';
+  };
+  options: {
+    draftAndPublish: true;
+  };
+  attributes: {
+    blocks: Schema.Attribute.DynamicZone<
+      ['carousel.hero-carousel', 'sections.product-list-section']
+    >;
+    createdAt: Schema.Attribute.DateTime;
+    createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+    locale: Schema.Attribute.String & Schema.Attribute.Private;
+    localizations: Schema.Attribute.Relation<'oneToMany', 'api::page.page'> &
+      Schema.Attribute.Private;
+    publishedAt: Schema.Attribute.DateTime;
+    seoDescription: Schema.Attribute.Text;
+    seoTitle: Schema.Attribute.String;
+    slug: Schema.Attribute.String &
+      Schema.Attribute.Required &
+      Schema.Attribute.Unique &
+      Schema.Attribute.DefaultTo<'/'>;
+    title: Schema.Attribute.String & Schema.Attribute.Required;
+    updatedAt: Schema.Attribute.DateTime;
+    updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+  };
+}
+
+export interface PluginContentReleasesRelease
+  extends Struct.CollectionTypeSchema {
+  collectionName: 'strapi_releases';
+  info: {
+    displayName: 'Release';
+    pluralName: 'releases';
+    singularName: 'release';
+  };
+  options: {
+    draftAndPublish: false;
+  };
+  pluginOptions: {
+    'content-manager': {
+      visible: false;
+    };
+    'content-type-builder': {
+      visible: false;
+    };
+  };
+  attributes: {
+    actions: Schema.Attribute.Relation<
+      'oneToMany',
+      'plugin::content-releases.release-action'
+    >;
+    createdAt: Schema.Attribute.DateTime;
+    createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+    locale: Schema.Attribute.String & Schema.Attribute.Private;
+    localizations: Schema.Attribute.Relation<
+      'oneToMany',
+      'plugin::content-releases.release'
+    > &
+      Schema.Attribute.Private;
+    name: Schema.Attribute.String & Schema.Attribute.Required;
+    publishedAt: Schema.Attribute.DateTime;
+    releasedAt: Schema.Attribute.DateTime;
+    scheduledAt: Schema.Attribute.DateTime;
+    status: Schema.Attribute.Enumeration<
+      ['ready', 'blocked', 'failed', 'done', 'empty']
+    > &
+      Schema.Attribute.Required;
+    timezone: Schema.Attribute.String;
+    updatedAt: Schema.Attribute.DateTime;
+    updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+  };
+}
+
+export interface PluginContentReleasesReleaseAction
+  extends Struct.CollectionTypeSchema {
+  collectionName: 'strapi_release_actions';
+  info: {
+    displayName: 'Release Action';
+    pluralName: 'release-actions';
+    singularName: 'release-action';
+  };
+  options: {
+    draftAndPublish: false;
+  };
+  pluginOptions: {
+    'content-manager': {
+      visible: false;
+    };
+    'content-type-builder': {
+      visible: false;
+    };
+  };
+  attributes: {
+    contentType: Schema.Attribute.String & Schema.Attribute.Required;
+    createdAt: Schema.Attribute.DateTime;
+    createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+    entryDocumentId: Schema.Attribute.String;
+    isEntryValid: Schema.Attribute.Boolean;
+    locale: Schema.Attribute.String & Schema.Attribute.Private;
+    localizations: Schema.Attribute.Relation<
+      'oneToMany',
+      'plugin::content-releases.release-action'
+    > &
+      Schema.Attribute.Private;
+    publishedAt: Schema.Attribute.DateTime;
+    release: Schema.Attribute.Relation<
+      'manyToOne',
+      'plugin::content-releases.release'
+    >;
+    type: Schema.Attribute.Enumeration<['publish', 'unpublish']> &
+      Schema.Attribute.Required;
+    updatedAt: Schema.Attribute.DateTime;
+    updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+  };
+}
+
+export interface PluginI18NLocale extends Struct.CollectionTypeSchema {
+  collectionName: 'i18n_locale';
+  info: {
+    collectionName: 'locales';
+    description: '';
+    displayName: 'Locale';
+    pluralName: 'locales';
+    singularName: 'locale';
+  };
+  options: {
+    draftAndPublish: false;
+  };
+  pluginOptions: {
+    'content-manager': {
+      visible: false;
+    };
+    'content-type-builder': {
+      visible: false;
+    };
+  };
+  attributes: {
+    code: Schema.Attribute.String & Schema.Attribute.Unique;
+    createdAt: Schema.Attribute.DateTime;
+    createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+    locale: Schema.Attribute.String & Schema.Attribute.Private;
+    localizations: Schema.Attribute.Relation<
+      'oneToMany',
+      'plugin::i18n.locale'
+    > &
+      Schema.Attribute.Private;
+    name: Schema.Attribute.String &
+      Schema.Attribute.SetMinMax<
+        {
+          max: 50;
+          min: 1;
+        },
+        number
+      >;
+    publishedAt: Schema.Attribute.DateTime;
+    updatedAt: Schema.Attribute.DateTime;
+    updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+  };
+}
+
+export interface PluginReviewWorkflowsWorkflow
+  extends Struct.CollectionTypeSchema {
+  collectionName: 'strapi_workflows';
+  info: {
+    description: '';
+    displayName: 'Workflow';
+    name: 'Workflow';
+    pluralName: 'workflows';
+    singularName: 'workflow';
+  };
+  options: {
+    draftAndPublish: false;
+  };
+  pluginOptions: {
+    'content-manager': {
+      visible: false;
+    };
+    'content-type-builder': {
+      visible: false;
+    };
+  };
+  attributes: {
+    contentTypes: Schema.Attribute.JSON &
+      Schema.Attribute.Required &
+      Schema.Attribute.DefaultTo<'[]'>;
+    createdAt: Schema.Attribute.DateTime;
+    createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+    locale: Schema.Attribute.String & Schema.Attribute.Private;
+    localizations: Schema.Attribute.Relation<
+      'oneToMany',
+      'plugin::review-workflows.workflow'
+    > &
+      Schema.Attribute.Private;
+    name: Schema.Attribute.String &
+      Schema.Attribute.Required &
+      Schema.Attribute.Unique;
+    publishedAt: Schema.Attribute.DateTime;
+    stageRequiredToPublish: Schema.Attribute.Relation<
+      'oneToOne',
+      'plugin::review-workflows.workflow-stage'
+    >;
+    stages: Schema.Attribute.Relation<
+      'oneToMany',
+      'plugin::review-workflows.workflow-stage'
+    >;
+    updatedAt: Schema.Attribute.DateTime;
+    updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+  };
+}
+
+export interface PluginReviewWorkflowsWorkflowStage
+  extends Struct.CollectionTypeSchema {
+  collectionName: 'strapi_workflows_stages';
+  info: {
+    description: '';
+    displayName: 'Stages';
+    name: 'Workflow Stage';
+    pluralName: 'workflow-stages';
+    singularName: 'workflow-stage';
+  };
+  options: {
+    draftAndPublish: false;
+    version: '1.1.0';
+  };
+  pluginOptions: {
+    'content-manager': {
+      visible: false;
+    };
+    'content-type-builder': {
+      visible: false;
+    };
+  };
+  attributes: {
+    color: Schema.Attribute.String & Schema.Attribute.DefaultTo<'#4945FF'>;
+    createdAt: Schema.Attribute.DateTime;
+    createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+    locale: Schema.Attribute.String & Schema.Attribute.Private;
+    localizations: Schema.Attribute.Relation<
+      'oneToMany',
+      'plugin::review-workflows.workflow-stage'
+    > &
+      Schema.Attribute.Private;
+    name: Schema.Attribute.String;
+    permissions: Schema.Attribute.Relation<'manyToMany', 'admin::permission'>;
+    publishedAt: Schema.Attribute.DateTime;
+    updatedAt: Schema.Attribute.DateTime;
+    updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+    workflow: Schema.Attribute.Relation<
+      'manyToOne',
+      'plugin::review-workflows.workflow'
+    >;
+  };
+}
+
+export interface PluginUploadFile extends Struct.CollectionTypeSchema {
+  collectionName: 'files';
+  info: {
+    description: '';
+    displayName: 'File';
+    pluralName: 'files';
+    singularName: 'file';
+  };
+  options: {
+    draftAndPublish: false;
+  };
+  pluginOptions: {
+    'content-manager': {
+      visible: false;
+    };
+    'content-type-builder': {
+      visible: false;
+    };
+  };
+  attributes: {
+    alternativeText: Schema.Attribute.Text;
+    caption: Schema.Attribute.Text;
+    createdAt: Schema.Attribute.DateTime;
+    createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+    ext: Schema.Attribute.String;
+    focalPoint: Schema.Attribute.JSON;
+    folder: Schema.Attribute.Relation<'manyToOne', 'plugin::upload.folder'> &
+      Schema.Attribute.Private;
+    folderPath: Schema.Attribute.String &
+      Schema.Attribute.Required &
+      Schema.Attribute.Private &
+      Schema.Attribute.SetMinMaxLength<{
+        minLength: 1;
+      }>;
+    formats: Schema.Attribute.JSON;
+    hash: Schema.Attribute.String & Schema.Attribute.Required;
+    height: Schema.Attribute.Integer;
+    locale: Schema.Attribute.String & Schema.Attribute.Private;
+    localizations: Schema.Attribute.Relation<
+      'oneToMany',
+      'plugin::upload.file'
+    > &
+      Schema.Attribute.Private;
+    mime: Schema.Attribute.String & Schema.Attribute.Required;
+    name: Schema.Attribute.String & Schema.Attribute.Required;
+    previewUrl: Schema.Attribute.Text;
+    provider: Schema.Attribute.String & Schema.Attribute.Required;
+    provider_metadata: Schema.Attribute.JSON;
+    publishedAt: Schema.Attribute.DateTime;
+    related: Schema.Attribute.Relation<'morphToMany'>;
+    size: Schema.Attribute.Decimal & Schema.Attribute.Required;
+    updatedAt: Schema.Attribute.DateTime;
+    updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+    url: Schema.Attribute.Text & Schema.Attribute.Required;
+    width: Schema.Attribute.Integer;
+  };
+}
+
+export interface PluginUploadFolder extends Struct.CollectionTypeSchema {
+  collectionName: 'upload_folders';
+  info: {
+    displayName: 'Folder';
+    pluralName: 'folders';
+    singularName: 'folder';
+  };
+  options: {
+    draftAndPublish: false;
+  };
+  pluginOptions: {
+    'content-manager': {
+      visible: false;
+    };
+    'content-type-builder': {
+      visible: false;
+    };
+  };
+  attributes: {
+    children: Schema.Attribute.Relation<'oneToMany', 'plugin::upload.folder'>;
+    createdAt: Schema.Attribute.DateTime;
+    createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+    files: Schema.Attribute.Relation<'oneToMany', 'plugin::upload.file'>;
+    locale: Schema.Attribute.String & Schema.Attribute.Private;
+    localizations: Schema.Attribute.Relation<
+      'oneToMany',
+      'plugin::upload.folder'
+    > &
+      Schema.Attribute.Private;
+    name: Schema.Attribute.String &
+      Schema.Attribute.Required &
+      Schema.Attribute.SetMinMaxLength<{
+        minLength: 1;
+      }>;
+    parent: Schema.Attribute.Relation<'manyToOne', 'plugin::upload.folder'>;
+    path: Schema.Attribute.String &
+      Schema.Attribute.Required &
+      Schema.Attribute.SetMinMaxLength<{
+        minLength: 1;
+      }>;
+    pathId: Schema.Attribute.Integer &
+      Schema.Attribute.Required &
+      Schema.Attribute.Unique;
+    publishedAt: Schema.Attribute.DateTime;
+    updatedAt: Schema.Attribute.DateTime;
+    updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+  };
+}
+
+export interface PluginUsersPermissionsPermission
+  extends Struct.CollectionTypeSchema {
+  collectionName: 'up_permissions';
+  info: {
+    description: '';
+    displayName: 'Permission';
+    name: 'permission';
+    pluralName: 'permissions';
+    singularName: 'permission';
+  };
+  options: {
+    draftAndPublish: false;
+  };
+  pluginOptions: {
+    'content-manager': {
+      visible: false;
+    };
+    'content-type-builder': {
+      visible: false;
+    };
+  };
+  attributes: {
+    action: Schema.Attribute.String & Schema.Attribute.Required;
+    createdAt: Schema.Attribute.DateTime;
+    createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+    locale: Schema.Attribute.String & Schema.Attribute.Private;
+    localizations: Schema.Attribute.Relation<
+      'oneToMany',
+      'plugin::users-permissions.permission'
+    > &
+      Schema.Attribute.Private;
+    publishedAt: Schema.Attribute.DateTime;
+    role: Schema.Attribute.Relation<
+      'manyToOne',
+      'plugin::users-permissions.role'
+    >;
+    updatedAt: Schema.Attribute.DateTime;
+    updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+  };
+}
+
+export interface PluginUsersPermissionsRole
+  extends Struct.CollectionTypeSchema {
+  collectionName: 'up_roles';
+  info: {
+    description: '';
+    displayName: 'Role';
+    name: 'role';
+    pluralName: 'roles';
+    singularName: 'role';
+  };
+  options: {
+    draftAndPublish: false;
+  };
+  pluginOptions: {
+    'content-manager': {
+      visible: false;
+    };
+    'content-type-builder': {
+      visible: false;
+    };
+  };
+  attributes: {
+    createdAt: Schema.Attribute.DateTime;
+    createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+    description: Schema.Attribute.String;
+    locale: Schema.Attribute.String & Schema.Attribute.Private;
+    localizations: Schema.Attribute.Relation<
+      'oneToMany',
+      'plugin::users-permissions.role'
+    > &
+      Schema.Attribute.Private;
+    name: Schema.Attribute.String &
+      Schema.Attribute.Required &
+      Schema.Attribute.SetMinMaxLength<{
+        minLength: 3;
+      }>;
+    permissions: Schema.Attribute.Relation<
+      'oneToMany',
+      'plugin::users-permissions.permission'
+    >;
+    publishedAt: Schema.Attribute.DateTime;
+    type: Schema.Attribute.String & Schema.Attribute.Unique;
+    updatedAt: Schema.Attribute.DateTime;
+    updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+    users: Schema.Attribute.Relation<
+      'oneToMany',
+      'plugin::users-permissions.user'
+    >;
+  };
+}
+
+export interface PluginUsersPermissionsUser
+  extends Struct.CollectionTypeSchema {
+  collectionName: 'up_users';
+  info: {
+    description: '';
+    displayName: 'User';
+    name: 'user';
+    pluralName: 'users';
+    singularName: 'user';
+  };
+  options: {
+    draftAndPublish: false;
+    timestamps: true;
+  };
+  attributes: {
+    blocked: Schema.Attribute.Boolean & Schema.Attribute.DefaultTo<false>;
+    confirmationToken: Schema.Attribute.String & Schema.Attribute.Private;
+    confirmed: Schema.Attribute.Boolean & Schema.Attribute.DefaultTo<false>;
+    createdAt: Schema.Attribute.DateTime;
+    createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+    email: Schema.Attribute.Email &
+      Schema.Attribute.Required &
+      Schema.Attribute.SetMinMaxLength<{
+        minLength: 6;
+      }>;
+    locale: Schema.Attribute.String & Schema.Attribute.Private;
+    localizations: Schema.Attribute.Relation<
+      'oneToMany',
+      'plugin::users-permissions.user'
+    > &
+      Schema.Attribute.Private;
+    password: Schema.Attribute.Password &
+      Schema.Attribute.Private &
+      Schema.Attribute.SetMinMaxLength<{
+        minLength: 6;
+      }>;
+    provider: Schema.Attribute.String;
+    publishedAt: Schema.Attribute.DateTime;
+    resetPasswordToken: Schema.Attribute.String & Schema.Attribute.Private;
+    role: Schema.Attribute.Relation<
+      'manyToOne',
+      'plugin::users-permissions.role'
+    >;
+    updatedAt: Schema.Attribute.DateTime;
+    updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+    username: Schema.Attribute.String &
+      Schema.Attribute.Required &
+      Schema.Attribute.Unique &
+      Schema.Attribute.SetMinMaxLength<{
+        minLength: 3;
+      }>;
+  };
+}
+
+declare module '@strapi/strapi' {
+  export namespace Public {
+    export interface ContentTypeSchemas {
+      'admin::api-token': AdminApiToken;
+      'admin::api-token-permission': AdminApiTokenPermission;
+      'admin::permission': AdminPermission;
+      'admin::role': AdminRole;
+      'admin::session': AdminSession;
+      'admin::transfer-token': AdminTransferToken;
+      'admin::transfer-token-permission': AdminTransferTokenPermission;
+      'admin::user': AdminUser;
+      'api::footer.footer': ApiFooterFooter;
+      'api::header.header': ApiHeaderHeader;
+      'api::page.page': ApiPagePage;
+      'plugin::content-releases.release': PluginContentReleasesRelease;
+      'plugin::content-releases.release-action': PluginContentReleasesReleaseAction;
+      'plugin::i18n.locale': PluginI18NLocale;
+      'plugin::review-workflows.workflow': PluginReviewWorkflowsWorkflow;
+      'plugin::review-workflows.workflow-stage': PluginReviewWorkflowsWorkflowStage;
+      'plugin::upload.file': PluginUploadFile;
+      'plugin::upload.folder': PluginUploadFolder;
+      'plugin::users-permissions.permission': PluginUsersPermissionsPermission;
+      'plugin::users-permissions.role': PluginUsersPermissionsRole;
+      'plugin::users-permissions.user': PluginUsersPermissionsUser;
+    }
+  }
+}
+</file>
+
+<file path=".env.example">
+HOST=0.0.0.0
+PORT=1337
+APP_KEYS="toBeModified1,toBeModified2"
+API_TOKEN_SALT=tobemodified
+ADMIN_JWT_SECRET=tobemodified
+TRANSFER_TOKEN_SALT=tobemodified
+JWT_SECRET=tobemodified
+ENCRYPTION_KEY=tobemodified
+</file>
+
+<file path=".gitignore">
+############################
+# OS X
+############################
+
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon
+.Spotlight-V100
+.Trashes
+._*
+
+
+############################
+# Linux
+############################
+
+*~
+
+
+############################
+# Windows
+############################
+
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+*.cab
+*.msi
+*.msm
+*.msp
+
+
+############################
+# Packages
+############################
+
+*.7z
+*.csv
+*.dat
+*.dmg
+*.gz
+*.iso
+*.jar
+*.rar
+*.tar
+*.zip
+*.com
+*.class
+*.dll
+*.exe
+*.o
+*.seed
+*.so
+*.swo
+*.swp
+*.swn
+*.swm
+*.out
+*.pid
+
+
+############################
+# Logs and databases
+############################
+
+.tmp
+*.log
+*.sql
+*.sqlite
+*.sqlite3
+
+
+############################
+# Misc.
+############################
+
+*#
+ssl
+.idea
+nbproject
+public/uploads/*
+!public/uploads/.gitkeep
+.tsbuildinfo
+.eslintcache
+
+############################
+# Node.js
+############################
+
+lib-cov
+lcov.info
+pids
+logs
+results
+node_modules
+.node_history
+
+############################
+# Package managers
+############################
+
+.yarn/*
+!.yarn/cache
+!.yarn/unplugged
+!.yarn/patches
+!.yarn/releases
+!.yarn/sdks
+!.yarn/versions
+.pnp.*
+yarn-error.log
+
+############################
+# Tests
+############################
+
+coverage
+
+############################
+# Strapi
+############################
+
+.env
+license.txt
+exports
+.strapi
+dist
+build
+.strapi-updater.json
+.strapi-cloud.json
+</file>
+
+<file path="package.json">
+{
+  "name": "cms",
+  "version": "0.1.0",
+  "private": true,
+  "description": "A Strapi application",
+  "scripts": {
+    "build": "strapi build",
+    "console": "strapi console",
+    "deploy": "strapi deploy",
+    "dev": "strapi develop",
+    "develop": "strapi develop",
+    "start": "strapi start",
+    "strapi": "strapi",
+    "upgrade": "npx @strapi/upgrade latest",
+    "upgrade:dry": "npx @strapi/upgrade latest --dry"
+  },
+  "dependencies": {
+    "@strapi/database": "5.52.3",
+    "@strapi/plugin-cloud": "5.52.3",
+    "@strapi/plugin-users-permissions": "5.52.3",
+    "@strapi/provider-upload-aws-s3": "^5.52.3",
+    "@strapi/strapi": "5.52.3",
+    "better-sqlite3": "12.8.0",
+    "react": "^18.0.0",
+    "react-dom": "^18.0.0",
+    "react-router-dom": "^6.30.3",
+    "styled-components": "^6.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "@types/react": "^18",
+    "@types/react-dom": "^18",
+    "typescript": "^5"
+  },
+  "engines": {
+    "node": ">=20.0.0 <=26.x.x",
+    "npm": ">=6.0.0"
+  },
+  "strapi": {
+    "uuid": "8f33c9c5-54f8-4478-8e74-34f738579f14",
+    "installId": "cf85a3c1711bb05ac4f22a4da5cd94a17107669ca30766f43a0214cd017ef6bf"
+  }
+}
+</file>
+
+<file path="README.md">
+# 🚀 Getting started with Strapi
+
+Strapi comes with a full featured [Command Line Interface](https://docs.strapi.io/dev-docs/cli) (CLI) which lets you scaffold and manage your project in seconds.
+
+### `develop`
+
+Start your Strapi application with autoReload enabled. [Learn more](https://docs.strapi.io/dev-docs/cli#strapi-develop)
+
+```
+npm run develop
+# or
+yarn develop
+```
+
+### `start`
+
+Start your Strapi application with autoReload disabled. [Learn more](https://docs.strapi.io/dev-docs/cli#strapi-start)
+
+```
+npm run start
+# or
+yarn start
+```
+
+### `build`
+
+Build your admin panel. [Learn more](https://docs.strapi.io/dev-docs/cli#strapi-build)
+
+```
+npm run build
+# or
+yarn build
+```
+
+## ⚙️ Deployment
+
+Strapi gives you many possible deployment options for your project including [Strapi Cloud](https://cloud.strapi.io). Browse the [deployment section of the documentation](https://docs.strapi.io/dev-docs/deployment) to find the best solution for your use case.
+
+```
+yarn strapi deploy
+```
+
+## 📚 Learn more
+
+- [Resource center](https://strapi.io/resource-center) - Strapi resource center.
+- [Strapi documentation](https://docs.strapi.io) - Official Strapi documentation.
+- [Strapi tutorials](https://strapi.io/tutorials) - List of tutorials made by the core team and the community.
+- [Strapi blog](https://strapi.io/blog) - Official Strapi blog containing articles made by the Strapi team and the community.
+- [Changelog](https://strapi.io/changelog) - Find out about the Strapi product updates, new features and general improvements.
+
+Feel free to check out the [Strapi GitHub repository](https://github.com/strapi/strapi). Your feedback and contributions are welcome!
+
+## ✨ Community
+
+- [Discord](https://discord.strapi.io) - Come chat with the Strapi community including the core team.
+- [Forum](https://forum.strapi.io/) - Place to discuss, ask questions and find answers, show your Strapi project and get feedback or just talk with other Community members.
+- [Awesome Strapi](https://github.com/strapi/awesome-strapi) - A curated list of awesome things related to Strapi.
+
+---
+
+<sub>🤫 Psst! [Strapi is hiring](https://strapi.io/careers).</sub>
+</file>
+
+<file path="tsconfig.json">
+{
+  "compilerOptions": {
+    "module": "CommonJS",
+    "moduleResolution": "Node",
+    "lib": ["ES2020"],
+    "target": "ES2019",
+    "strict": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "incremental": true,
+    "esModuleInterop": true,
+    "resolveJsonModule": true,
+    "noEmitOnError": true,
+    "noImplicitThis": true,
+    "outDir": "dist",
+    "rootDir": "."
+  },
+  "include": [
+    // Include root files
+    "./",
+    // Include all ts files
+    "./**/*.ts",
+    // Include all js files
+    "./**/*.js",
+    // Force the JSON files in the src folder to be included
+    "src/**/*.json"
+  ],
+
+  "exclude": [
+    "node_modules/",
+    "build/",
+    "dist/",
+    ".cache/",
+    ".tmp/",
+    ".strapi/",
+
+    // Do not include admin files in the server compilation
+    "src/admin/",
+    // Do not include test files
+    "**/*.test.*",
+    // Do not include plugins in the server compilation
+    "src/plugins/**"
+  ]
+}
+</file>
+
+</files>
