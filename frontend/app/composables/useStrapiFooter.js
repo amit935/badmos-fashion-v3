@@ -1,38 +1,19 @@
-import { ref } from 'vue'
+const POPULATE =
+  'populate[columns][populate]=links&populate[socialLinks][populate]=iconImage';
 
+// Call as: const { data: footerData } = await useStrapiFooter()
 export function useStrapiFooter() {
-  const footerData = ref(null)
-  const loading = ref(false)
-  const error = ref(null)
+  const config = useRuntimeConfig();
+  let cmsUrl = config.public?.cmsUrl || 'http://localhost:1337/api';
+  if (import.meta.server) cmsUrl = cmsUrl.replace('localhost', '127.0.0.1');
 
-  const fetchFooter = async () => {
-    loading.value = true
-    error.value = null
-    const config = useRuntimeConfig()
-    const cmsUrl = config.public?.cmsUrl || 'http://localhost:1337/api'
-
+  return useAsyncData('strapi-footer', async () => {
     try {
-      const populateQuery = 'populate[columns][populate]=links&populate[socialLinks][populate]=iconImage'
-      const response = await fetch(`${cmsUrl}/footer?${populateQuery}`)
-      if (!response.ok) {
-        throw new Error(`Failed to fetch footer: ${response.statusText}`)
-      }
-      const json = await response.json()
-      footerData.value = json?.data || null
-      return footerData.value
+      const json = await $fetch(`${cmsUrl}/footer?${POPULATE}`);
+      return json?.data || null;
     } catch (err) {
-      console.error('useStrapiFooter Error:', err)
-      error.value = err.message
-      return null
-    } finally {
-      loading.value = false
+      console.warn('Unable to fetch footer from Strapi:', err?.message);
+      return null;
     }
-  }
-
-  return {
-    footerData,
-    loading,
-    error,
-    fetchFooter,
-  }
+  });
 }

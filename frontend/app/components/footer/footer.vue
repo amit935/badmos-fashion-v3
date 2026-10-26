@@ -1,44 +1,34 @@
 <script setup>
-import { ref, computed, onMounted } from 'vue';
-import { useRoute } from 'vue-router';
-import { useStrapiFooter } from '~/composables/useStrapiFooter.js';
+import { computed } from 'vue'
+import { useRoute } from 'vue-router'
+import { useStrapiFooter } from '~/composables/useStrapiFooter.js'
 
-const route = useRoute();
-const currentYear = new Date().getFullYear();
+const route = useRoute()
+const currentYear = new Date().getFullYear()
 
-const { footerData, fetchFooter } = useStrapiFooter();
-const { getStrapiMedia } = useStrapiMedia();
+const { data: footerData } = await useStrapiFooter()
+const { getStrapiMedia } = useStrapiMedia()
 
 const shouldHideFooter = computed(() => {
-  const hideRoutes = ['/login', '/register'];
-  return hideRoutes.includes(route.path);
-});
+  const hideRoutes = ['/login', '/register']
+  return hideRoutes.includes(route.path)
+})
 
-onMounted(async () => {
-  try {
-    await fetchFooter();
-  } catch (err) {
-    console.error('Error fetching footer data:', err);
-  }
-});
 const copyrightDisplay = computed(() => {
-  const year = currentYear;
-  const rawText = footerData.value?.copyrightText || '© {year} BADMOS FASHION. ALL RIGHTS RESERVED.';
-  
+  const year = currentYear
+  const rawText = footerData.value?.copyrightText || '© {year} BADMOS FASHION. ALL RIGHTS RESERVED.'
+
   if (rawText.includes('{year}')) {
-    return rawText.replace(/\{year\}/g, String(year));
+    return rawText.replace(/\{year\}/g, String(year))
   }
-  
   if (rawText.includes(String(year))) {
-    return rawText;
+    return rawText
   }
-  
   if (rawText.startsWith('©')) {
-    return rawText.replace('©', `© ${year}`);
+    return rawText.replace('©', `© ${year}`)
   }
-  
-  return `© ${year} ${rawText}`;
-});
+  return `© ${year} ${rawText}`
+})
 </script>
 
 <template>
