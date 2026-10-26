@@ -1,8 +1,7 @@
 /**
- * Nitro Server API route for resolving Vendure products by slug pointers or collection/facet filters.
- * Frontend passes product slug pointers (stored in Strapi), and this endpoint queries Vendure to return live product details.
+ * Resolves Vendure products for listings and Strapi sections.
+ * Every product is returned with a canonical hierarchical `path`.
  */
-
 export default defineEventHandler(async (event) => {
   const query = getQuery(event);
   const rawSlugs = query.slugs || query.ids;
@@ -24,203 +23,138 @@ export default defineEventHandler(async (event) => {
   const config = useRuntimeConfig();
   const vendureApiUrl = config.public?.apiUrl || 'http://127.0.0.1:3000/shop-api';
 
-  try {
-    const graphqlQuery = `
-      query SearchProducts($input: SearchInput!) {
-        search(input: $input) {
-          totalItems
-          items {
-            productId
-            productName
-            slug
-            productAsset {
-              id
-              preview
-            }
-            priceWithTax {
-              ... on SinglePrice {
-                value
-              }
-              ... on PriceRange {
-                min
-                max
-              }
-            }
-            currencyCode
+  const searchQuery = `
+    query SearchProducts($input: SearchInput!) {
+      search(input: $input) {
+        totalItems
+        items {
+          productId
+          productName
+          slug
+          productAsset { id preview }
+          priceWithTax {
+            ... on SinglePrice { value }
+            ... on PriceRange { min max }
           }
+          currencyCode
         }
       }
-    `;
-
-    // Construct Vendure search input
-    const input: Record<string, any> = {
-      take: limit,
-      groupByProduct: true
-    };
-
-    if (term) {
-      input.term = term;
     }
+  `;
 
-    if (collections.length > 0) {
-      input.collectionSlug = collections[0];
-    }
+  try {
+    // One search per collection slug (or one unfiltered search), then merge
+    const searchTargets: (string | null)[] = collections.length ? collections : [null];
 
-    // Call Vendure GraphQL API
-    const res: any = await $fetch(vendureApiUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: { query: graphqlQuery, variables: { input } }
-    }).catch(() => null);
+    const results = await Promise.all(
+      searchTargets.map(async (collectionSlug) => {
+        const input: Record<string, any> = { take: limit, groupByProduct: true };
+        if (term) input.term = term;
+        if (collectionSlug) input.collectionSlug = collectionSlug;
 
-    const searchItems = res?.data?.search?.items || [];
+        const res: any = await $fetch(vendureApiUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: { query: searchQuery, variables: { input } },
+        }).catch(() => null);
 
-    if (searchItems.length > 0) {
-      const mappedProducts = searchItems.map((item: any) => ({
+        return res?.data?.search?.items || [];
+      })
+    );
+
+    // Merge and de-duplicate by product slug
+    const seen = new Set<string>();
+    const searchItems = results.flat().filter((item: any) => {
+      if (seen.has(item.slug)) return false;
+      seen.add(item.slug);
+      return true;
+    });
+
+    if (searchItems.length === 0) return { products: [] };
+
+    const fullProducts = await fetchFullProducts(
+      vendureApiUrl,
+      searchItems.map((i: any) => i.slug)
+    );
+
+    let mappedProducts = searchItems.map((item: any) => {
+      const full = fullProducts.get(item.slug);
+      const fallbackPrice = item.priceWithTax?.value || item.priceWithTax?.min || 0;
+
+      return {
         id: item.productId,
-        slug: item.slug, // Pointer
+        slug: item.slug,
         name: item.productName,
-        priceWithTax: item.priceWithTax?.value || item.priceWithTax?.min || 0,
-        variants: [
-          {
-            id: `v-${item.productId}`,
-            priceWithTax: item.priceWithTax?.value || item.priceWithTax?.min || 0
-          }
-        ],
-        assets: [
-          { preview: item.productAsset?.preview || 'https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=800&auto=format&fit=crop' }
-        ],
-        optionGroups: [
-          {
-            code: 'size',
-            name: 'Size',
-            customFields: { isParentGroup: true },
-            options: [
-              { id: 'opt-s', code: 'S', name: 'S' },
-              { id: 'opt-m', code: 'M', name: 'M' },
-              { id: 'opt-l', code: 'L', name: 'L' }
-            ]
-          }
-        ]
-      }));
+        path: buildProductPath(full?.collections, item.slug), // canonical URL
+        currencyCode: item.currencyCode || full?.variants?.[0]?.currencyCode,
+        priceWithTax: fallbackPrice,
+        variants: full?.variants || [{ id: `v-${item.productId}`, priceWithTax: fallbackPrice }],
+        assets: full?.assets?.length
+          ? full.assets.map((a: any) => ({ id: a.id, preview: a.preview }))
+          : item.productAsset?.preview
+            ? [{ preview: item.productAsset.preview }]
+            : [],
+        optionGroups: full?.optionGroups || [],
+      };
+    });
 
-      // Filter by exact requested slug pointers if provided
-      if (slugs.length > 0) {
-        const filtered = mappedProducts.filter((p: any) => slugs.includes(p.slug));
-        if (filtered.length > 0) return { products: filtered };
-      }
-
-      return { products: mappedProducts };
+    // Strapi hand-picked slugs: keep only those, in the order Strapi listed them
+    if (slugs.length > 0) {
+      const bySlug = new Map(mappedProducts.map((p: any) => [p.slug, p]));
+      const ordered = slugs.map((s) => bySlug.get(s)).filter(Boolean);
+      if (ordered.length) mappedProducts = ordered as any[];
     }
 
-    // Fallback to catalog matching requested slug pointers
-    return { products: getFallbackCatalog(slugs, collections) };
+    return { products: mappedProducts };
   } catch (err) {
     console.warn('Error querying Vendure product API:', err);
-    return { products: getFallbackCatalog(slugs, collections) };
+    return { products: [] };
   }
 });
 
-function getFallbackCatalog(slugs: string[], collections: string[]) {
-  const defaultCatalog = [
-    {
-      id: '1',
-      slug: 'classic-cotton-tshirt',
-      name: 'Classic Cotton T-Shirt',
-      priceWithTax: 4999,
-      variants: [{ id: 'v1', priceWithTax: 4999 }],
-      assets: [
-        { preview: 'https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=800&auto=format&fit=crop' },
-        { preview: 'https://images.unsplash.com/photo-1583743814966-8936f5b7be1a?w=800&auto=format&fit=crop' }
-      ],
-      optionGroups: [
-        {
-          code: 'size',
-          name: 'Size',
-          customFields: { isParentGroup: true },
-          options: [
-            { id: 'o1', code: 'S', name: 'S' },
-            { id: 'o2', code: 'M', name: 'M' },
-            { id: 'o3', code: 'L', name: 'L' },
-            { id: 'o4', code: 'XL', name: 'XL' }
-          ]
+async function fetchFullProducts(vendureApiUrl: string, slugs: string[]): Promise<Map<string, any>> {
+  const results = new Map<string, any>();
+
+  const productDetailQuery = `
+    query GetProduct($slug: String!) {
+      product(slug: $slug) {
+        id
+        slug
+        name
+        assets { id preview }
+        collections {
+          slug
+          breadcrumbs { slug }
         }
-      ]
-    },
-    {
-      id: '2',
-      slug: 'oversized-denim-jacket',
-      name: 'Oversized Denim Jacket',
-      priceWithTax: 12999,
-      variants: [{ id: 'v2', priceWithTax: 12999 }],
-      assets: [
-        { preview: 'https://images.unsplash.com/photo-1576871337632-b9aef4c17ab9?w=800&auto=format&fit=crop' },
-        { preview: 'https://images.unsplash.com/photo-1576871337622-98d48d1cf531?w=800&auto=format&fit=crop' }
-      ],
-      optionGroups: [
-        {
-          code: 'size',
-          name: 'Size',
-          customFields: { isParentGroup: true },
-          options: [
-            { id: 'o5', code: 'M', name: 'M' },
-            { id: 'o6', code: 'L', name: 'L' }
-          ]
+        optionGroups {
+          id code name
+          options { id code name }
         }
-      ]
-    },
-    {
-      id: '3',
-      slug: 'tailored-linen-trousers',
-      name: 'Tailored Linen Trousers',
-      priceWithTax: 8999,
-      variants: [{ id: 'v3', priceWithTax: 8999 }],
-      assets: [
-        { preview: 'https://images.unsplash.com/photo-1594633312681-425c7b97ccd1?w=800&auto=format&fit=crop' },
-        { preview: 'https://images.unsplash.com/photo-1509631179647-0177331693ae?w=800&auto=format&fit=crop' }
-      ],
-      optionGroups: [
-        {
-          code: 'size',
-          name: 'Size',
-          customFields: { isParentGroup: true },
-          options: [
-            { id: 'o7', code: '30', name: '30' },
-            { id: 'o8', code: '32', name: '32' },
-            { id: 'o9', code: '34', name: '34' }
-          ]
+        variants {
+          id name priceWithTax currencyCode
+          options {
+            id code name
+            group { id code name }
+          }
         }
-      ]
-    },
-    {
-      id: '4',
-      slug: 'minimalist-leather-sneakers',
-      name: 'Minimalist Leather Sneakers',
-      priceWithTax: 14999,
-      variants: [{ id: 'v4', priceWithTax: 14999 }],
-      assets: [
-        { preview: 'https://images.unsplash.com/photo-1549298916-b41d501d3772?w=800&auto=format&fit=crop' },
-        { preview: 'https://images.unsplash.com/photo-1560769629-975ec94e6a86?w=800&auto=format&fit=crop' }
-      ],
-      optionGroups: [
-        {
-          code: 'size',
-          name: 'Size',
-          customFields: { isParentGroup: true },
-          options: [
-            { id: 'o10', code: '40', name: '40' },
-            { id: 'o11', code: '41', name: '41' },
-            { id: 'o12', code: '42', name: '42' }
-          ]
-        }
-      ]
+      }
     }
-  ];
+  `;
 
-  if (slugs && slugs.length > 0) {
-    const matched = defaultCatalog.filter(p => slugs.includes(p.slug));
-    if (matched.length > 0) return matched;
-  }
+  await Promise.all(
+    slugs.map(async (slug) => {
+      try {
+        const res: any = await $fetch(vendureApiUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: { query: productDetailQuery, variables: { slug } },
+        });
+        if (res?.data?.product) results.set(slug, res.data.product);
+      } catch (e) {
+        console.warn(`Failed to fetch product details for slug: ${slug}`, e);
+      }
+    })
+  );
 
-  return defaultCatalog;
+  return results;
 }

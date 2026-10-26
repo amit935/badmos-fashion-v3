@@ -1,36 +1,23 @@
-/**
- * Composable for formatting currency prices.
- */
+import { useI18n } from 'vue-i18n';
+
 export function usePriceFormatter() {
-  /**
-   * Formats a numeric price into localized currency string.
-   * 
-   * @param {Number|String} amount Price amount (in minor units e.g. cents/kobo or decimal)
-   * @param {String} currencyCode Currency code e.g. 'USD', 'NGN', 'EUR'
-   * @returns {String} Formatted price
-   */
-  const formatPrice = (amount, currencyCode = 'USD') => {
-    if (amount === undefined || amount === null) return '';
+  const { t } = useI18n();
 
-    const numericValue = typeof amount === 'number' ? amount : parseFloat(amount);
-    if (isNaN(numericValue)) return String(amount);
-
-    // Vendure / e-commerce APIs send prices in minor units (e.g. 4999 minor units = 49.99)
-    const val = (numericValue > 100 && Number.isInteger(numericValue)) ? numericValue / 100 : numericValue;
+  // amount: Vendure minor units (4999 = 49.99). currencyCode: ISO code from Vendure.
+  const formatPrice = (amount, currencyCode) => {
+    if (amount === undefined || amount === null || amount === '') return '';
+    const minor = Number(amount);
+    if (Number.isNaN(minor)) return String(amount);
 
     try {
-      return new Intl.NumberFormat('en-US', {
+      return new Intl.NumberFormat(t('locale.currency'), {
         style: 'currency',
-        currency: currencyCode,
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2
-      }).format(val);
-    } catch (err) {
-      return `$${val.toFixed(2)}`;
+        currency: currencyCode || 'INR',
+      }).format(minor / 100);
+    } catch {
+      return `${currencyCode || ''} ${(minor / 100).toFixed(2)}`.trim();
     }
   };
 
-  return {
-    formatPrice
-  };
+  return { formatPrice };
 }
