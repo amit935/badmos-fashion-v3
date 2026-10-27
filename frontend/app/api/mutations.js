@@ -1,4 +1,5 @@
 import { gql } from 'graphql-request';
+import { CART_FRAGMENT } from './fragments';
 
 /**
  * USER AUTHENTICATION MUTATIONS
@@ -35,3 +36,40 @@ export const LOGOUT = gql`
     }
   }
 `;
+
+
+/**
+ * CART MUTATIONS
+ */
+export const ADD_ITEM_TO_ORDER = gql`
+  mutation AddItemToOrder($variantId: ID!, $quantity: Int!) {
+    addItemToOrder(productVariantId: $variantId, quantity: $quantity) {
+      ...Cart
+      ... on ErrorResult { errorCode message }
+      ... on InsufficientStockError { quantityAvailable order { ...Cart } }
+    }
+  }
+  ${CART_FRAGMENT}
+`;
+
+export const ADJUST_ORDER_LINE = gql`
+  mutation AdjustOrderLine($lineId: ID!, $quantity: Int!) {
+    adjustOrderLine(orderLineId: $lineId, quantity: $quantity) {
+      ...Cart
+      ... on ErrorResult { errorCode message }
+      ... on InsufficientStockError { quantityAvailable order { ...Cart } }
+    }
+  }
+  ${CART_FRAGMENT}
+`;
+
+export const REMOVE_ORDER_LINE = gql`
+  mutation RemoveOrderLine($lineId: ID!) {
+    removeOrderLine(orderLineId: $lineId) {
+      ...Cart
+      ... on ErrorResult { errorCode message }
+    }
+  }
+  ${CART_FRAGMENT}
+`;
+

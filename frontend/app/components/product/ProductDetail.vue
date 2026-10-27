@@ -1,5 +1,6 @@
 <script setup>
 import { useI18n } from 'vue-i18n';
+import { useCartStore } from '~/store/cart';
 
 import { computed, ref, watch } from 'vue';
 import { usePriceFormatter } from '~/composables/usePriceFormatter';
@@ -115,6 +116,35 @@ const selectedVariant = computed(() => {
   );
 });
 
+const cart = useCartStore();
+
+const isOutOfStock = computed(() => selectedVariant.value?.stockLevel === 'OUT_OF_STOCK');
+const canAddToCart = computed(() => selectedVariant.value !== null && !isOutOfStock.value);
+
+const addToCartLabel = computed(() => {
+  if (!selectedVariant.value) return 'Select options';
+  if (isOutOfStock.value) return 'Out of stock';
+  return 'Add to cart';
+});
+
+function addToCart() {
+  const variant = selectedVariant.value;
+  if (!variant) return;
+
+  cart.add({
+    variantId: variant.id,
+    name: props.product.name,
+    variantName: variant.name,
+    image: props.product.assets?.[0]?.preview || '',
+    options: variant.options.map((option) => option.name),
+    path: route.path,
+    unitPrice: variant.priceWithTax,
+    currencyCode: variant.currencyCode,
+  });
+
+  cart.isPanelOpen = true;
+}
+
 // ---------- price and tax ----------
 const lowestVariant = computed(() =>
   [...variants.value].sort((a, b) => a.priceWithTax - b.priceWithTax)[0]
@@ -217,6 +247,13 @@ const activeImage = ref(props.product.assets?.[0]?.preview || '');
       >
         Only a few left
       </p>
+
+      <UiButton
+        :text="addToCartLabel"
+        :disabled="!canAddToCart"
+        content-classes="w-full"
+        @click="addToCart"
+      />
 
       <div v-html="product.description" class="text-gray-600 pt-2"></div>
     </div>

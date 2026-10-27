@@ -1,4 +1,5 @@
 import { gql } from 'graphql-request';
+import { CART_FRAGMENT } from './fragments';
 
 /**
  * USER AUTHENTICATION QUERIES
@@ -14,4 +15,14 @@ export const GET_ACTIVE_CUSTOMER = gql`
       emailAddress
     }
   }
+`;
+
+/**
+ * CART AUTHENTICATION QUERIES
+ */
+export const GET_ACTIVE_ORDER = gql`
+  query GetActiveOrder {
+    activeOrder { ...Cart }
+  }
+  ${CART_FRAGMENT}
 `;
