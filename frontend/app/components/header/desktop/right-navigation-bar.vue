@@ -32,7 +32,12 @@ const userMenuItems = computed(() => {
   return []
 })
 
-const showCartButton = computed(() => activeHeaderData.value?.showCartButton !== false)
+const route = useRoute()
+const isCheckoutPage = computed(() => route.path.startsWith('/checkout'))
+
+const showCartButton = computed(
+  () => activeHeaderData.value?.showCartButton !== false && !isCheckoutPage.value
+)
 const guestTitle = computed(() => activeHeaderData.value?.userMenu?.guestTitle || 'Welcome to Badmos Fashion')
 const joinClanLabel = computed(() => activeHeaderData.value?.userMenu?.joinClanButtonLabel || 'Join The Clan')
 const joinClanUrl = computed(() => activeHeaderData.value?.userMenu?.joinClanButtonUrl || '/login')

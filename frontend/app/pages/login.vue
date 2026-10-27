@@ -7,6 +7,17 @@ definePageMeta({
 const { sendOtp, authenticateWithOtp, loading, error, clearError } = useAuth();
 const { t: $t } = useTranslation();
 
+const route = useRoute();
+
+// Only allow internal paths, so the redirect can't be used to send users to another site
+function getRedirectTarget() {
+  const target = route.query.redirect;
+  const isInternalPath =
+    typeof target === 'string' && target.startsWith('/') && !target.startsWith('//');
+
+  return isInternalPath ? target : '/';
+}
+
 const step = ref('email'); // 'email' or 'otp'
 const email = ref('');
 const otpCode = ref('');
@@ -63,7 +74,7 @@ async function onCheckIn() {
   clearError();
   const success = await authenticateWithOtp(email.value, otpCode.value);
   if (success) {
-    navigateTo('/');
+    navigateTo(getRedirectTarget());
   }
 }
 </script>

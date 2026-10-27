@@ -13,7 +13,10 @@ export default defineNuxtConfig({
   routeRules: {
     '/uploads/**': {
       proxy: `${process.env.NUXT_PUBLIC_STRAPI_BASE_URL || 'http://127.0.0.1:1337'}/uploads/**`
-    }
+    },
+    '/checkout': { ssr: false},
+    '/checkout/**': { ssr: false},
+    '/order/**': { ssr: false},
   },
   gtag: {
     id: process.env.NUXT_GTAG_ID || 'G-XXXXXXXXXX' // Replace with your actual Measurement ID
