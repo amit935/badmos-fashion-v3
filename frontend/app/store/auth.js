@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia';
 import { ref } from 'vue';
 import { getClient } from '~/api/client';
+import { useCartStore } from '~/store/cart';
 import { REQUEST_LOGIN_OTP, AUTHENTICATE_WITH_OTP, LOGOUT } from '~/api/mutations';
 import { GET_ACTIVE_CUSTOMER } from '~/api/queries';
 
@@ -54,6 +55,7 @@ export const useAuthStore = defineStore('auth', () => {
 
       // Authentication succeeded — fetch full user profile
       await fetchActiveCustomer();
+      await useCartStore().mergeGuestCart();
       return true;
     } catch (err) {
       error.value = err.response?.errors?.[0]?.message || err.message || 'Authentication failed';
@@ -87,6 +89,7 @@ export const useAuthStore = defineStore('auth', () => {
    */
   async function logout() {
     try {
+      await useCartStore().reset();   // flush pending edits, then clear in-memory cart
       await getClient().request(LOGOUT);
     } finally {
       user.value = null;

@@ -4,6 +4,14 @@ import { useRouter } from 'vue-router'
 import { storeToRefs } from 'pinia'
 import { useAuthStore } from '~/store/auth'
 import { useSignout } from '~/composables/useSignout.js'
+import { useCartStore } from '~/store/cart'
+
+const cart = useCartStore()
+const { isPanelOpen } = storeToRefs(cart)
+
+const toggleCartPanel = () => {
+  isPanelOpen.value = !isPanelOpen.value
+}
 
 const props = defineProps({
   headerData: { type: Object, default: null }
@@ -54,19 +62,26 @@ const toggleMenu = () => { menuOpen.value = !menuOpen.value }
 <template>
     <nav>
         <ul class="flex gap-6">
-            <li v-if="showCartButton">
-              <button 
-                @click="toggleMenu" 
-                class="h-full px-2 py-1 flex items-center border-b-3 border-transparent cursor-pointer"
-                aria-label="Toggle menu"
+           <li v-if="showCartButton">
+              <button
+                @click="toggleCartPanel"
+                class="relative h-full px-2 py-1 flex items-center border-b-3 border-transparent cursor-pointer"
+                aria-label="Open cart"
               >
                 <Icon name="material-symbols:shopping-bag" size="24" />
+                <span
+                  v-if="cart.itemCount > 0"
+                  class="absolute -top-1 -right-1 bg-black text-white text-xs rounded-full min-w-5 h-5 px-1 flex items-center justify-center"
+                >
+                  {{ cart.itemCount }}
+                </span>
               </button>
-              <div 
-                v-if="menuOpen"
+
+              <div
+                v-if="isPanelOpen"
                 class="fixed h-[100vh] w-[100%] md:w-[35%] top-0 right-0 bg-white z-20 pt-10 px-8 border-l-2 border-black"
               >
-                <CartPanel @toggleMenu="toggleMenu"/>
+                <CartPanel @toggleMenu="toggleCartPanel" />
               </div>
             </li>
             <li>
