@@ -167,7 +167,7 @@ export const useCartStore = defineStore('cart', () => {
       const data = await getClient().request(GET_ACTIVE_ORDER);
       order.value = data.activeOrder || null;
     } catch {
-      /* keep current state */
+      'fetchActiveOrder failed:', err?.response?.errors || err
     }
   }
 

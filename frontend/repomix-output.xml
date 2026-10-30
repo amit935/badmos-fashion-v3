@@ -57,6 +57,11 @@ app/
       hero-carousel.vue
     cart/
       panel.vue
+    checkout/
+      AddressCarousel.vue
+      AddressFields.vue
+      OrderSummary.vue
+      ShippingMethods.vue
     collection/
       CollectionListing.vue
     footer/
@@ -97,15 +102,25 @@ app/
   layouts/
     app-layout.vue
     auth-layout.vue
+  middleware/
+    require-login.js
   pages/
+    checkout/
+      index.vue
+      payment.vue
+    order/
+      [code].vue
     [...slug].vue
     index.vue
     login.vue
   plugins/
     auth.client.js
+    cart.client.js
     i18n.js
   store/
     auth.js
+    cart.js
+    checkout.js
     cms.js
   app.vue
 public/
@@ -124,12 +139,19 @@ server/
       [...path].ts
   utils/
     productPath.ts
+tests/
+  store/
+    cart.test.js
+    productPath.test.js
+    usePriceFormatter.test.js
 .gitignore
+.nuxtrc
 development.env
 nuxt.config.ts
 package.json
 README.md
 tsconfig.json
+vitest.config.ts
 </directory_structure>
 
 <files>
@@ -158,11 +180,89 @@ export default { getClient };
 </file>
 
 <file path="app/api/fragments.js">
+import { gql } from 'graphql-request';
 
+export const CART_FRAGMENT = gql`
+  fragment Cart on Order {
+    id
+    code
+    state
+    totalQuantity
+    subTotal
+    subTotalWithTax
+    shipping
+    shippingWithTax
+    total
+    totalWithTax
+    currencyCode
+    couponCodes
+    discounts {
+      description
+      amount
+      amountWithTax
+    }
+    taxSummary {
+      description
+      taxRate
+      taxBase
+      taxTotal
+    }
+    shippingAddress {
+      fullName
+      phoneNumber
+      streetLine1
+      streetLine2
+      city
+      province
+      postalCode
+      countryCode
+    }
+    billingAddress {
+      fullName
+      phoneNumber
+      streetLine1
+      streetLine2
+      city
+      province
+      postalCode
+      countryCode
+    }
+    shippingLines {
+      priceWithTax
+      shippingMethod {
+        id
+        name
+      }
+    }
+    lines {
+      id
+      quantity
+      unitPriceWithTax
+      linePrice
+      linePriceWithTax
+      featuredAsset {
+        preview
+      }
+      productVariant {
+        id
+        name
+        options {
+          code
+          name
+        }
+        product {
+          slug
+          name
+        }
+      }
+    }
+  }
+`;
 </file>
 
 <file path="app/api/mutations.js">
 import { gql } from 'graphql-request';
+import { CART_FRAGMENT } from './fragments';
 
 /**
  * USER AUTHENTICATION MUTATIONS
@@ -199,10 +299,137 @@ export const LOGOUT = gql`
     }
   }
 `;
+
+
+/**
+ * CART MUTATIONS
+ */
+export const ADD_ITEM_TO_ORDER = gql`
+  mutation AddItemToOrder($variantId: ID!, $quantity: Int!) {
+    addItemToOrder(productVariantId: $variantId, quantity: $quantity) {
+      ...Cart
+      ... on ErrorResult { errorCode message }
+      ... on InsufficientStockError { quantityAvailable order { ...Cart } }
+    }
+  }
+  ${CART_FRAGMENT}
+`;
+
+export const ADJUST_ORDER_LINE = gql`
+  mutation AdjustOrderLine($lineId: ID!, $quantity: Int!) {
+    adjustOrderLine(orderLineId: $lineId, quantity: $quantity) {
+      ...Cart
+      ... on ErrorResult { errorCode message }
+      ... on InsufficientStockError { quantityAvailable order { ...Cart } }
+    }
+  }
+  ${CART_FRAGMENT}
+`;
+
+export const REMOVE_ORDER_LINE = gql`
+  mutation RemoveOrderLine($lineId: ID!) {
+    removeOrderLine(orderLineId: $lineId) {
+      ...Cart
+      ... on ErrorResult { errorCode message }
+    }
+  }
+  ${CART_FRAGMENT}
+`;
+
+export const SET_ORDER_SHIPPING_ADDRESS = gql`
+  mutation SetOrderShippingAddress($input: CreateAddressInput!) {
+    setOrderShippingAddress(input: $input) {
+      ...Cart
+      ... on ErrorResult {
+        errorCode
+        message
+      }
+    }
+  }
+  ${CART_FRAGMENT}
+`;
+
+export const SET_ORDER_BILLING_ADDRESS = gql`
+  mutation SetOrderBillingAddress($input: CreateAddressInput!) {
+    setOrderBillingAddress(input: $input) {
+      ...Cart
+      ... on ErrorResult {
+        errorCode
+        message
+      }
+    }
+  }
+  ${CART_FRAGMENT}
+`;
+
+export const SET_ORDER_SHIPPING_METHOD = gql`
+  mutation SetOrderShippingMethod($shippingMethodId: [ID!]!) {
+    setOrderShippingMethod(shippingMethodId: $shippingMethodId) {
+      ...Cart
+      ... on ErrorResult {
+        errorCode
+        message
+      }
+    }
+  }
+  ${CART_FRAGMENT}
+`;
+
+export const APPLY_COUPON_CODE = gql`
+  mutation ApplyCouponCode($couponCode: String!) {
+    applyCouponCode(couponCode: $couponCode) {
+      ...Cart
+      ... on ErrorResult {
+        errorCode
+        message
+      }
+    }
+  }
+  ${CART_FRAGMENT}
+`;
+
+export const REMOVE_COUPON_CODE = gql`
+  mutation RemoveCouponCode($couponCode: String!) {
+    removeCouponCode(couponCode: $couponCode) {
+      ...Cart
+    }
+  }
+  ${CART_FRAGMENT}
+`;
+
+export const TRANSITION_ORDER_TO_STATE = gql`
+  mutation TransitionOrderToState($state: String!) {
+    transitionOrderToState(state: $state) {
+      ...Cart
+      ... on ErrorResult {
+        errorCode
+        message
+      }
+    }
+  }
+  ${CART_FRAGMENT}
+`;
+
+export const CREATE_CUSTOMER_ADDRESS = gql`
+  mutation CreateCustomerAddress($input: CreateAddressInput!) {
+    createCustomerAddress(input: $input) {
+      id
+    }
+  }
+`;
+
+export const UPDATE_CUSTOMER_ADDRESS = gql`
+  mutation UpdateCustomerAddress($input: UpdateAddressInput!) {
+    updateCustomerAddress(input: $input) {
+      id
+    }
+  }
+`;
 </file>
 
 <file path="app/api/queries.js">
 import { gql } from 'graphql-request';
+import { CART_FRAGMENT } from './fragments';
 
 /**
  * USER AUTHENTICATION QUERIES
@@ -216,6 +443,52 @@ export const GET_ACTIVE_CUSTOMER = gql`
       firstName
       lastName
       emailAddress
+    }
+  }
+`;
+
+/**
+ * CART AUTHENTICATION QUERIES
+ */
+export const GET_ACTIVE_ORDER = gql`
+  query GetActiveOrder {
+    activeOrder { ...Cart }
+  }
+  ${CART_FRAGMENT}
+`;
+
+export const GET_CHECKOUT_CUSTOMER = gql`
+  query GetCheckoutCustomer {
+    activeCustomer {
+      id
+      firstName
+      lastName
+      phoneNumber
+      addresses {
+        id
+        fullName
+        phoneNumber
+        streetLine1
+        streetLine2
+        city
+        province
+        postalCode
+        country {
+          code
+        }
+        defaultShippingAddress
+        defaultBillingAddress
+      }
+    }
+  }
+`;
+
+export const GET_ELIGIBLE_SHIPPING_METHODS = gql`
+  query GetEligibleShippingMethods {
+    eligibleShippingMethods {
+      id
+      name
+      priceWithTax
     }
   }
 `;
@@ -1157,11 +1430,35 @@ onBeforeUnmount(() => {
 
 <file path="app/components/cart/panel.vue">
 <script setup>
+import { useCartStore } from '~/store/cart';
+import { usePriceFormatter } from '~/composables/usePriceFormatter';
+
 const emit = defineEmits(['toggleMenu']);
+
+const cart = useCartStore();
+const { formatPrice } = usePriceFormatter();
+
+function increase(item) {
+  cart.setQuantity(item.variantId, item.quantity + 1);
+}
+
+function decrease(item) {
+  cart.setQuantity(item.variantId, item.quantity - 1);
+}
+
+function removeItem(item) {
+  cart.remove(item.variantId);
+}
+
+async function goToCheckout() {
+  await cart.flushAll();   // send pending quantity edits first
+  emit('toggleMenu');      // close the panel
+  await navigateTo('/checkout');
+}
 </script>
 
 <template>
-  <div>
+  <div class="flex flex-col h-full">
     <button
       @click="emit('toggleMenu')"
       class="p-1 absolute top-0 right-0 m-4 text-gray-400 hover:text-red-600 transition-colors"
@@ -1169,9 +1466,356 @@ const emit = defineEmits(['toggleMenu']);
     >
       <Icon name="material-symbols:close" size="24" />
     </button>
+
     <h2 class="text-2xl font-bold secondary-font">Shopping Cart</h2>
-    <p class="text-gray-500 mt-4">Your cart is empty.</p>
+
+    <p v-if="cart.error" class="text-red-600 text-sm mt-2">{{ cart.error }}</p>
+
+    <ul v-if="cart.mergeIssues.length" class="text-orange-600 text-sm mt-2">
+      <li v-for="issue in cart.mergeIssues" :key="issue.name">
+        {{ issue.name }} could not be added: {{ issue.reason }}
+      </li>
+    </ul>
+
+    <p v-if="cart.items.length === 0" class="text-gray-500 mt-4">Your cart is empty.</p>
+
+    <ul v-else class="mt-6 flex-grow overflow-y-auto space-y-4">
+      <li
+        v-for="item in cart.items"
+        :key="item.variantId"
+        class="flex gap-3 border-b border-gray-200 pb-4"
+      >
+        <img :src="item.image" :alt="item.name" class="w-20 h-24 object-cover border border-black" />
+
+        <div class="flex-1 space-y-1">
+          <NuxtLink :to="item.path" class="font-semibold" @click="emit('toggleMenu')">
+            {{ item.name }}
+          </NuxtLink>
+          <p class="text-sm text-gray-500">{{ item.options.join(' / ') }}</p>
+          <p class="font-bold">{{ formatPrice(item.unitPrice, item.currencyCode) }}</p>
+
+          <div class="flex items-center gap-2">
+            <button class="w-7 h-7 border border-black" @click="decrease(item)">-</button>
+            <span>{{ item.quantity }}</span>
+            <button class="w-7 h-7 border border-black" @click="increase(item)">+</button>
+            <button class="ml-3 text-sm underline text-gray-500" @click="removeItem(item)">Remove</button>
+          </div>
+        </div>
+      </li>
+    </ul>
+
+    <div v-if="cart.items.length" class="py-4 border-t-2 border-black flex justify-between font-bold">
+      <span>Subtotal</span>
+      <span>{{ formatPrice(cart.subtotal, cart.currencyCode) }}</span>
+    </div>
+    <div v-if="cart.items.length" class="py-4 border-t-2 border-black flex justify-between font-bold">
+      <UiButton text="Checkout" content-classes="w-full" @click="goToCheckout" />
+    </div>
   </div>
+</template>
+</file>
+
+<file path="app/components/checkout/AddressCarousel.vue">
+<script setup>
+import { ref } from 'vue';
+
+defineProps({
+  addresses: { type: Array, required: true },
+  activeId: { type: [String, Number], default: null },
+});
+
+const emit = defineEmits(['select', 'new']);
+
+const track = ref(null);
+
+function scroll(direction) {
+  track.value?.scrollBy({ left: direction * 260, behavior: 'smooth' });
+}
+</script>
+
+<template>
+  <div class="relative">
+    <button
+      type="button"
+      class="absolute -left-3 top-1/2 -translate-y-1/2 z-10 w-8 h-8 rounded-full border-2 border-black bg-white flex items-center justify-center"
+      aria-label="Previous addresses"
+      @click="scroll(-1)"
+    >
+      <Icon name="material-symbols:chevron-left" size="20" />
+    </button>
+
+    <div ref="track" class="flex gap-3 overflow-x-auto snap-x snap-mandatory scroll-smooth px-1 py-1">
+      <button
+        v-for="address in addresses"
+        :key="address.id"
+        type="button"
+        class="snap-start shrink-0 w-60 border-2 p-3 text-left text-sm space-y-1"
+        :class="activeId === address.id ? 'border-black bg-gray-100' : 'border-gray-300 bg-white'"
+        @click="emit('select', address)"
+      >
+        <p class="font-bold">{{ address.fullName }}</p>
+        <p class="text-gray-600">
+          {{ address.streetLine1 }}<span v-if="address.streetLine2">, {{ address.streetLine2 }}</span>
+        </p>
+        <p class="text-gray-600">{{ address.city }}, {{ address.province }} {{ address.postalCode }}</p>
+        <p class="text-gray-600">{{ address.phoneNumber }}</p>
+      </button>
+
+      <button
+        type="button"
+        class="snap-start shrink-0 w-40 border-2 border-dashed border-black p-3 text-sm font-bold uppercase flex items-center justify-center"
+        @click="emit('new')"
+      >
+        + New address
+      </button>
+    </div>
+
+    <button
+      type="button"
+      class="absolute -right-3 top-1/2 -translate-y-1/2 z-10 w-8 h-8 rounded-full border-2 border-black bg-white flex items-center justify-center"
+      aria-label="Next addresses"
+      @click="scroll(1)"
+    >
+      <Icon name="material-symbols:chevron-right" size="20" />
+    </button>
+  </div>
+</template>
+</file>
+
+<file path="app/components/checkout/AddressFields.vue">
+<script setup>
+defineProps({
+  address: { type: Object, required: true },
+  idPrefix: { type: String, required: true },
+});
+</script>
+
+<template>
+  <div class="space-y-4">
+    <AuthFormInputField
+      :id="`${idPrefix}-fullName`"
+      label="Full name"
+      placeholder="Full name"
+      type="text"
+      v-model="address.fullName"
+    />
+    <AuthFormInputField
+      :id="`${idPrefix}-phone`"
+      label="Phone number"
+      placeholder="10 digit mobile number"
+      type="tel"
+      inputmode="tel"
+      maxlength="10"
+      v-model="address.phoneNumber"
+    />
+    <AuthFormInputField
+      :id="`${idPrefix}-street1`"
+      label="Address line 1"
+      placeholder="House no, building, street"
+      type="text"
+      v-model="address.streetLine1"
+    />
+    <AuthFormInputField
+      :id="`${idPrefix}-street2`"
+      label="Address line 2 (optional)"
+      placeholder="Area, landmark"
+      type="text"
+      v-model="address.streetLine2"
+    />
+    <AuthFormInputField
+      :id="`${idPrefix}-city`"
+      label="City"
+      placeholder="City"
+      type="text"
+      v-model="address.city"
+    />
+    <AuthFormInputField
+      :id="`${idPrefix}-state`"
+      label="State"
+      placeholder="State"
+      type="text"
+      v-model="address.province"
+    />
+    <AuthFormInputField
+      :id="`${idPrefix}-pincode`"
+      label="Pincode"
+      placeholder="6 digit pincode"
+      type="text"
+      inputmode="numeric"
+      maxlength="6"
+      v-model="address.postalCode"
+    />
+    <p class="text-sm text-gray-500">Country: India</p>
+  </div>
+</template>
+</file>
+
+<file path="app/components/checkout/OrderSummary.vue">
+<script setup>
+import { computed } from 'vue';
+import { useCartStore } from '~/store/cart';
+import { useCheckoutStore } from '~/store/checkout';
+import { usePriceFormatter } from '~/composables/usePriceFormatter';
+
+defineProps({
+  allowCoupon: { type: Boolean, default: false },
+});
+
+const cart = useCartStore();
+const checkout = useCheckoutStore();
+const { formatPrice } = usePriceFormatter();
+
+const shippingLabel = computed(() => {
+  const order = cart.order;
+
+  if (order.shippingLines?.length) {
+    return order.shipping > 0 ? formatPrice(order.shipping, order.currencyCode) : 'FREE';
+  }
+
+  if (checkout.shippingChecked) return 'FREE';
+
+  return 'Calculated at next step';
+});
+
+// Item prices before any discount, excluding tax
+const itemsBase = computed(() =>
+  (cart.order?.lines || []).reduce((sum, line) => sum + line.linePrice, 0)
+);
+</script>
+
+<template>
+  <aside v-if="cart.order" class="border-2 border-black p-6 space-y-4 h-fit">
+    <h2 class="text-xl font-bold uppercase">Order summary</h2>
+
+    <!-- Items (read-only) -->
+    <ul class="space-y-3">
+      <li v-for="item in cart.items" :key="item.variantId" class="flex gap-3">
+        <img :src="item.image" :alt="item.name" class="w-16 h-20 object-cover border border-black" />
+        <div class="flex-1">
+          <p class="font-semibold">{{ item.name }}</p>
+          <p class="text-sm text-gray-500">{{ item.options.join(' / ') }} · Qty {{ item.quantity }}</p>
+        </div>
+        <p class="font-bold">{{ formatPrice(item.unitPrice * item.quantity, item.currencyCode) }}</p>
+      </li>
+    </ul>
+
+    <!-- Coupon -->
+    <div v-if="allowCoupon" class="space-y-2">
+      <div class="flex gap-2">
+        <input
+          v-model="checkout.couponInput"
+          type="text"
+          placeholder="Coupon code"
+          class="flex-1 border border-gray-300 rounded-lg px-3 py-2 outline-none"
+          @keyup.enter="checkout.applyCoupon()"
+        />
+        <button
+          type="button"
+          class="px-4 border-2 border-black uppercase text-sm font-bold"
+          @click="checkout.applyCoupon()"
+        >
+          Apply
+        </button>
+      </div>
+      <p v-if="checkout.couponError" class="text-red-600 text-sm">{{ checkout.couponError }}</p>
+    </div>
+
+    <ul v-if="cart.order.couponCodes.length" class="space-y-1 text-sm">
+      <li v-for="code in cart.order.couponCodes" :key="code" class="flex justify-between">
+        <span>Coupon: {{ code }}</span>
+        <button
+          v-if="allowCoupon"
+          type="button"
+          class="underline text-gray-500"
+          @click="checkout.removeCoupon(code)"
+        >
+          Remove
+        </button>
+      </li>
+    </ul>
+
+        <!-- Totals -->
+    <div class="border-t border-gray-200 pt-4 space-y-2 text-sm">
+      <div class="flex justify-between">
+        <span>Items (excl. tax)</span>
+        <span>{{ formatPrice(itemsBase, cart.order.currencyCode) }}</span>
+      </div>
+
+      <div
+        v-for="discount in cart.order.discounts"
+        :key="discount.description"
+        class="flex justify-between text-green-700"
+      >
+        <span>{{ discount.description }}</span>
+        <span>{{ formatPrice(discount.amount, cart.order.currencyCode) }}</span>
+      </div>
+
+      <div
+        v-if="cart.order.discounts.length"
+        class="flex justify-between border-t border-gray-200 pt-2"
+      >
+        <span>Subtotal after discount</span>
+        <span>{{ formatPrice(cart.order.subTotal, cart.order.currencyCode) }}</span>
+      </div>
+
+      <div class="flex justify-between">
+        <span>Shipping</span>
+        <span :class="shippingLabel === 'FREE' ? 'font-bold text-green-700' : ''">{{ shippingLabel }}</span>
+      </div>
+
+      <div
+        v-for="tax in cart.order.taxSummary"
+        :key="tax.description + tax.taxRate"
+        class="flex justify-between text-gray-600"
+      >
+        <span>{{ tax.description }} ({{ tax.taxRate }}%)</span>
+        <span>{{ formatPrice(tax.taxTotal, cart.order.currencyCode) }}</span>
+      </div>
+
+      <div class="flex justify-between text-base font-bold border-t border-black pt-2">
+        <span>Total</span>
+        <span>{{ formatPrice(cart.order.totalWithTax, cart.order.currencyCode) }}</span>
+      </div>
+    </div>
+  </aside>
+</template>
+</file>
+
+<file path="app/components/checkout/ShippingMethods.vue">
+<script setup>
+import { useCartStore } from '~/store/cart';
+import { useCheckoutStore } from '~/store/checkout';
+import { usePriceFormatter } from '~/composables/usePriceFormatter';
+
+const cart = useCartStore();
+const checkout = useCheckoutStore();
+const { formatPrice } = usePriceFormatter();
+</script>
+
+<template>
+  <fieldset v-if="checkout.shippingMethods.length > 1" class="space-y-2">
+    <legend class="text-xl font-bold uppercase mb-2">Shipping method</legend>
+
+    <label
+      v-for="method in checkout.shippingMethods"
+      :key="method.id"
+      class="flex items-center justify-between gap-3 border-2 border-black p-3 cursor-pointer"
+    >
+      <span class="flex items-center gap-2">
+        <input
+          type="radio"
+          name="shipping-method"
+          :value="method.id"
+          :checked="checkout.selectedShippingMethodId === method.id"
+          @change="checkout.chooseShippingMethod(method.id)"
+        />
+        {{ method.name }}
+      </span>
+      <span class="font-bold">
+        {{ method.priceWithTax > 0 ? formatPrice(method.priceWithTax, cart.order.currencyCode) : 'FREE' }}
+      </span>
+    </label>
+  </fieldset>
 </template>
 </file>
 
@@ -1442,6 +2086,14 @@ import { useRouter } from 'vue-router'
 import { storeToRefs } from 'pinia'
 import { useAuthStore } from '~/store/auth'
 import { useSignout } from '~/composables/useSignout.js'
+import { useCartStore } from '~/store/cart'
+
+const cart = useCartStore()
+const { isPanelOpen } = storeToRefs(cart)
+
+const toggleCartPanel = () => {
+  isPanelOpen.value = !isPanelOpen.value
+}
 
 const props = defineProps({
   headerData: { type: Object, default: null }
@@ -1462,7 +2114,12 @@ const userMenuItems = computed(() => {
   return []
 })
 
-const showCartButton = computed(() => activeHeaderData.value?.showCartButton !== false)
+const route = useRoute()
+const isCheckoutPage = computed(() => route.path.startsWith('/checkout'))
+
+const showCartButton = computed(
+  () => activeHeaderData.value?.showCartButton !== false && !isCheckoutPage.value
+)
 const guestTitle = computed(() => activeHeaderData.value?.userMenu?.guestTitle || 'Welcome to Badmos Fashion')
 const joinClanLabel = computed(() => activeHeaderData.value?.userMenu?.joinClanButtonLabel || 'Join The Clan')
 const joinClanUrl = computed(() => activeHeaderData.value?.userMenu?.joinClanButtonUrl || '/login')
@@ -1492,19 +2149,26 @@ const toggleMenu = () => { menuOpen.value = !menuOpen.value }
 <template>
     <nav>
         <ul class="flex gap-6">
-            <li v-if="showCartButton">
-              <button 
-                @click="toggleMenu" 
-                class="h-full px-2 py-1 flex items-center border-b-3 border-transparent cursor-pointer"
-                aria-label="Toggle menu"
+           <li v-if="showCartButton">
+              <button
+                @click="toggleCartPanel"
+                class="relative h-full px-2 py-1 flex items-center border-b-3 border-transparent cursor-pointer"
+                aria-label="Open cart"
               >
                 <Icon name="material-symbols:shopping-bag" size="24" />
+                <span
+                  v-if="cart.itemCount > 0"
+                  class="absolute -top-1 -right-1 bg-black text-white text-xs rounded-full min-w-5 h-5 px-1 flex items-center justify-center"
+                >
+                  {{ cart.itemCount }}
+                </span>
               </button>
-              <div 
-                v-if="menuOpen"
+
+              <div
+                v-if="isPanelOpen"
                 class="fixed h-[100vh] w-[100%] md:w-[35%] top-0 right-0 bg-white z-20 pt-10 px-8 border-l-2 border-black"
               >
-                <CartPanel @toggleMenu="toggleMenu"/>
+                <CartPanel @toggleMenu="toggleCartPanel" />
               </div>
             </li>
             <li>
@@ -2175,6 +2839,7 @@ const goToProductDetail = (optionCode) => {
 <file path="app/components/product/ProductDetail.vue">
 <script setup>
 import { useI18n } from 'vue-i18n';
+import { useCartStore } from '~/store/cart';
 
 import { computed, ref, watch } from 'vue';
 import { usePriceFormatter } from '~/composables/usePriceFormatter';
@@ -2290,6 +2955,35 @@ const selectedVariant = computed(() => {
   );
 });
 
+const cart = useCartStore();
+
+const isOutOfStock = computed(() => selectedVariant.value?.stockLevel === 'OUT_OF_STOCK');
+const canAddToCart = computed(() => selectedVariant.value !== null && !isOutOfStock.value);
+
+const addToCartLabel = computed(() => {
+  if (!selectedVariant.value) return 'Select options';
+  if (isOutOfStock.value) return 'Out of stock';
+  return 'Add to cart';
+});
+
+function addToCart() {
+  const variant = selectedVariant.value;
+  if (!variant) return;
+
+  cart.add({
+    variantId: variant.id,
+    name: props.product.name,
+    variantName: variant.name,
+    image: props.product.assets?.[0]?.preview || '',
+    options: variant.options.map((option) => option.name),
+    path: route.path,
+    unitPrice: variant.priceWithTax,
+    currencyCode: variant.currencyCode,
+  });
+
+  cart.isPanelOpen = true;
+}
+
 // ---------- price and tax ----------
 const lowestVariant = computed(() =>
   [...variants.value].sort((a, b) => a.priceWithTax - b.priceWithTax)[0]
@@ -2392,6 +3086,13 @@ const activeImage = ref(props.product.assets?.[0]?.preview || '');
       >
         Only a few left
       </p>
+
+      <UiButton
+        :text="addToCartLabel"
+        :disabled="!canAddToCart"
+        content-classes="w-full"
+        @click="addToCart"
+      />
 
       <div v-html="product.description" class="text-gray-600 pt-2"></div>
     </div>
@@ -3682,6 +4383,174 @@ const { t } = useI18n();
 </template>
 </file>
 
+<file path="app/middleware/require-login.js">
+import { useAuthStore } from '~/store/auth';
+
+// Sends logged-out visitors to /login and brings them back after login
+export default defineNuxtRouteMiddleware(async (to) => {
+  // The server can't see the session cookie, so only decide in the browser
+  if (import.meta.server) {
+    return;
+  }
+
+  const authStore = useAuthStore();
+
+  // The store may not have loaded the session yet, so ask Vendure once
+  if (!authStore.isAuthenticated) {
+    await authStore.fetchActiveCustomer();
+  }
+
+  if (authStore.isAuthenticated) {
+    return;
+  }
+
+  return navigateTo({ path: '/login', query: { redirect: to.fullPath } });
+});
+</file>
+
+<file path="app/pages/checkout/index.vue">
+<script setup>
+import { onMounted, ref } from 'vue';
+import { useCartStore } from '~/store/cart';
+import { useCheckoutStore } from '~/store/checkout';
+
+definePageMeta({
+  layout: 'app-layout',
+  middleware: 'require-login',
+});
+
+const cart = useCartStore();
+const checkout = useCheckoutStore();
+
+const isReady = ref(false);
+
+onMounted(async () => {
+  await checkout.load();
+
+  // Nothing to check out
+  if (cart.items.length === 0) {
+    await navigateTo('/');
+    return;
+  }
+
+  isReady.value = true;
+});
+
+async function onContinue() {
+  const success = await checkout.submitCustomerInfo();
+
+  if (success) {
+    await navigateTo('/checkout/payment');
+  }
+}
+</script>
+
+<template>
+  <section class="max-width px-4 py-10">
+    <h1 class="secondary-font text-4xl uppercase">Checkout</h1>
+
+    <p v-if="!isReady" class="text-gray-500 mt-6">Loading checkout...</p>
+
+    <div v-else class="mt-8 grid md:grid-cols-2 gap-10">
+      <form class="space-y-6" @submit.prevent="onContinue">
+        <h2 class="text-xl font-bold uppercase">Shipping address</h2>
+
+        <CheckoutAddressCarousel
+          v-if="checkout.savedAddresses.length"
+          :addresses="checkout.savedAddresses"
+          :active-id="checkout.matchingSavedId(checkout.shippingAddress)"
+          @select="checkout.selectSavedAddress('shipping', $event)"
+          @new="checkout.startNewAddress('shipping')"
+        />
+
+        <CheckoutAddressFields :address="checkout.shippingAddress" id-prefix="shipping" />
+
+        <label
+          v-if="!checkout.matchingSavedId(checkout.shippingAddress)"
+          class="flex items-center gap-2 text-sm"
+        >
+          <input type="checkbox" v-model="checkout.saveShipping" />
+          Save this address to my account for next time
+        </label>
+
+        <label class="flex items-center gap-2">
+          <input type="checkbox" v-model="checkout.billingSameAsShipping" />
+          Billing address same as shipping address
+        </label>
+
+        <template v-if="!checkout.billingSameAsShipping">
+          <h2 class="text-xl font-bold uppercase">Billing address</h2>
+
+          <CheckoutAddressCarousel
+            v-if="checkout.savedAddresses.length"
+            :addresses="checkout.savedAddresses"
+            :active-id="checkout.matchingSavedId(checkout.billingAddress)"
+            @select="checkout.selectSavedAddress('billing', $event)"
+            @new="checkout.startNewAddress('billing')"
+          />
+
+          <CheckoutAddressFields :address="checkout.billingAddress" id-prefix="billing" />
+
+          <label
+            v-if="!checkout.matchingSavedId(checkout.billingAddress)"
+            class="flex items-center gap-2 text-sm"
+          >
+            <input type="checkbox" v-model="checkout.saveBilling" />
+            Save this billing address to my account for next time
+          </label>
+        </template>
+
+        <CheckoutShippingMethods />
+
+        <p v-if="checkout.error" class="text-red-600 text-sm">{{ checkout.error }}</p>
+
+        <UiButton
+          type="submit"
+          text="Continue to payment"
+          content-classes="w-full"
+          :loading="checkout.loading"
+          :disabled="checkout.loading"
+        />
+      </form>
+
+      <CheckoutOrderSummary :allow-coupon="true" />
+    </div>
+  </section>
+</template>
+</file>
+
+<file path="app/pages/checkout/payment.vue">
+<script setup>
+definePageMeta({
+  layout: 'app-layout',
+  middleware: 'require-login',
+});
+</script>
+
+<template>
+  <section class="max-width px-4 py-10">
+    <h1 class="secondary-font text-4xl uppercase">Checkout: payment</h1>
+  </section>
+</template>
+</file>
+
+<file path="app/pages/order/[code].vue">
+<script setup>
+definePageMeta({
+  layout: 'app-layout',
+  middleware: 'require-login',
+});
+
+const route = useRoute();
+</script>
+
+<template>
+  <section class="max-width px-4 py-10">
+    <h1 class="secondary-font text-4xl uppercase">Order {{ route.params.code }}</h1>
+  </section>
+</template>
+</file>
+
 <file path="app/pages/[...slug].vue">
 <script setup>
 import { useCmsStore } from '~/store/cms';
@@ -3833,6 +4702,17 @@ definePageMeta({
 const { sendOtp, authenticateWithOtp, loading, error, clearError } = useAuth();
 const { t: $t } = useTranslation();
 
+const route = useRoute();
+
+// Only allow internal paths, so the redirect can't be used to send users to another site
+function getRedirectTarget() {
+  const target = route.query.redirect;
+  const isInternalPath =
+    typeof target === 'string' && target.startsWith('/') && !target.startsWith('//');
+
+  return isInternalPath ? target : '/';
+}
+
 const step = ref('email'); // 'email' or 'otp'
 const email = ref('');
 const otpCode = ref('');
@@ -3889,7 +4769,7 @@ async function onCheckIn() {
   clearError();
   const success = await authenticateWithOtp(email.value, otpCode.value);
   if (success) {
-    navigateTo('/');
+    navigateTo(getRedirectTarget());
   }
 }
 </script>
@@ -3953,6 +4833,22 @@ export default defineNuxtPlugin(async () => {
 });
 </file>
 
+<file path="app/plugins/cart.client.js">
+import { useCartStore } from '~/store/cart';
+
+export default defineNuxtPlugin((nuxtApp) => {
+  nuxtApp.hook('app:mounted', async () => {
+    const cart = useCartStore();
+    await cart.init();
+
+    // Best-effort flush of pending quantity edits when the tab is hidden or closed
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'hidden') cart.flushAll();
+    });
+  });
+});
+</file>
+
 <file path="app/plugins/i18n.js">
 import i18n from '~/i18n';
 
@@ -3965,6 +4861,7 @@ export default defineNuxtPlugin((nuxtApp) => {
 import { defineStore } from 'pinia';
 import { ref } from 'vue';
 import { getClient } from '~/api/client';
+import { useCartStore } from '~/store/cart';
 import { REQUEST_LOGIN_OTP, AUTHENTICATE_WITH_OTP, LOGOUT } from '~/api/mutations';
 import { GET_ACTIVE_CUSTOMER } from '~/api/queries';
 
@@ -4018,6 +4915,7 @@ export const useAuthStore = defineStore('auth', () => {
 
       // Authentication succeeded — fetch full user profile
       await fetchActiveCustomer();
+      await useCartStore().mergeGuestCart();
       return true;
     } catch (err) {
       error.value = err.response?.errors?.[0]?.message || err.message || 'Authentication failed';
@@ -4051,6 +4949,7 @@ export const useAuthStore = defineStore('auth', () => {
    */
   async function logout() {
     try {
+      await useCartStore().reset();   // flush pending edits, then clear in-memory cart
       await getClient().request(LOGOUT);
     } finally {
       user.value = null;
@@ -4077,6 +4976,660 @@ export const useAuthStore = defineStore('auth', () => {
     fetchActiveCustomer,
     logout,
     clearError,
+  };
+});
+</file>
+
+<file path="app/store/cart.js">
+import { defineStore } from 'pinia';
+import { ref, computed, watch } from 'vue';
+import { getClient } from '~/api/client';
+import { ADD_ITEM_TO_ORDER, ADJUST_ORDER_LINE, REMOVE_ORDER_LINE } from '~/api/mutations';
+import { GET_ACTIVE_ORDER } from '~/api/queries';
+import { useAuthStore } from '~/store/auth';
+
+const STORAGE_KEY = 'badmos-guest-cart';
+const DEBOUNCE_MS = 600;
+
+export const useCartStore = defineStore('cart', () => {
+  // ── State ──
+  const guestItems = ref([]);   // [{ variantId, quantity, name, image, options, path, unitPrice, currencyCode }]
+  const order = ref(null);      // Vendure active order (logged-in users)
+  const pending = ref({});      // variantId -> { quantity, snapshot } (local edits not yet confirmed)
+  const error = ref(null);
+  const mergeIssues = ref([]);  // guest lines Vendure could not add on login
+  const isPanelOpen = ref(false);
+
+  const timers = new Map();     // variantId -> debounce timer
+  let queue = Promise.resolve(); // serial queue: server calls never overlap
+
+  const isAuthed = () => useAuthStore().isAuthenticated;
+
+  // ── Unified read model ──
+  const serverItems = computed(() =>
+    (order.value?.lines || []).map((l) => ({
+      variantId: l.productVariant.id,
+      lineId: l.id,
+      quantity: l.quantity,
+      name: l.productVariant.product.name,
+      variantName: l.productVariant.name,
+      image: l.featuredAsset?.preview || '',
+      options: (l.productVariant.options || []).map((o) => o.name),
+      path: `/${l.productVariant.product.slug}`, // resolve route redirects to the canonical path
+      unitPrice: l.unitPriceWithTax,
+      currencyCode: order.value.currencyCode,
+    }))
+  );
+
+  // Server lines overlaid with pending local quantities, plus pending brand-new lines
+  const authedItems = computed(() => {
+    const out = serverItems.value
+      .map((i) => ({ ...i, quantity: pending.value[i.variantId]?.quantity ?? i.quantity }))
+      .filter((i) => i.quantity > 0);
+    const known = new Set(serverItems.value.map((i) => i.variantId));
+    for (const [variantId, p] of Object.entries(pending.value)) {
+      if (!known.has(variantId) && p.quantity > 0 && p.snapshot) {
+        out.push({ ...p.snapshot, variantId, quantity: p.quantity });
+      }
+    }
+    return out;
+  });
+
+  const items = computed(() => (isAuthed() ? authedItems.value : guestItems.value));
+  const itemCount = computed(() => items.value.reduce((n, i) => n + i.quantity, 0));
+  const subtotal = computed(() => items.value.reduce((n, i) => n + i.unitPrice * i.quantity, 0));
+  const currencyCode = computed(() => items.value[0]?.currencyCode || order.value?.currencyCode || 'INR');
+
+  // ── Guest persistence (client only) ──
+  function loadGuest() {
+    try {
+      guestItems.value = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+    } catch {
+      guestItems.value = [];
+    }
+  }
+  if (import.meta.client) {
+    watch(guestItems, (v) => {
+      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(v)); } catch { /* storage blocked */ }
+    }, { deep: true });
+  }
+
+  // ── Public actions ──
+  // snapshot: { variantId, name, image, options, path, unitPrice, currencyCode }
+  function add(snapshot, qty = 1) {
+    const current = items.value.find((i) => i.variantId === snapshot.variantId)?.quantity || 0;
+    setQuantity(snapshot.variantId, current + qty, snapshot);
+  }
+
+  function remove(variantId) {
+    setQuantity(variantId, 0);
+  }
+
+  function setQuantity(variantId, quantity, snapshot) {
+    const qty = Math.max(0, Math.floor(quantity));
+
+    if (!isAuthed()) {
+      const idx = guestItems.value.findIndex((i) => i.variantId === variantId);
+      if (qty === 0) {
+        if (idx >= 0) guestItems.value.splice(idx, 1);
+      } else if (idx >= 0) {
+        guestItems.value[idx].quantity = qty;
+      } else if (snapshot) {
+        guestItems.value.push({ ...snapshot, quantity: qty });
+      }
+      return;
+    }
+
+    // Logged in: optimistic local update, then sync
+    const existing = pending.value[variantId]?.snapshot
+      || items.value.find((i) => i.variantId === variantId);
+    pending.value = { ...pending.value, [variantId]: { quantity: qty, snapshot: snapshot || existing } };
+
+    clearTimeout(timers.get(variantId));
+    const onServer = serverItems.value.some((i) => i.variantId === variantId);
+    if (!onServer) {
+      flushLine(variantId); // first add goes out immediately
+    } else {
+      timers.set(variantId, setTimeout(() => flushLine(variantId), DEBOUNCE_MS));
+    }
+  }
+
+  // ── Server sync (logged-in) ──
+  const enqueue = (fn) => {
+    queue = queue.then(fn).catch(() => {});
+    return queue;
+  };
+
+  function applyResult(res) {
+    const next = res?.lines ? res : res?.order; // plain Order, or InsufficientStockError.order
+    if (next?.lines) order.value = next;
+    if (res?.errorCode) error.value = res.message || res.errorCode;
+  }
+
+  function flushLine(variantId) {
+    clearTimeout(timers.get(variantId));
+    timers.delete(variantId);
+
+    return enqueue(async () => {
+      const p = pending.value[variantId];
+      if (!p) return;
+      const sent = p.quantity;
+      const line = order.value?.lines?.find((l) => l.productVariant.id === variantId);
+
+      try {
+        let res = null;
+        if (!line) {
+          if (sent > 0) res = (await getClient().request(ADD_ITEM_TO_ORDER, { variantId, quantity: sent })).addItemToOrder;
+        } else if (sent <= 0) {
+          res = (await getClient().request(REMOVE_ORDER_LINE, { lineId: line.id })).removeOrderLine;
+        } else if (sent !== line.quantity) {
+          res = (await getClient().request(ADJUST_ORDER_LINE, { lineId: line.id, quantity: sent })).adjustOrderLine;
+        }
+        if (res) applyResult(res);
+      } catch (e) {
+        error.value = e?.response?.errors?.[0]?.message || e.message || 'Could not update cart';
+        await fetchActiveOrder();
+      }
+
+      // Clear pending only if the user hasn't edited again while the request was in flight
+      if (pending.value[variantId]?.quantity === sent) {
+        const { [variantId]: _drop, ...rest } = pending.value;
+        pending.value = rest;
+      }
+    });
+  }
+
+  // Send everything now (before checkout, logout, or leaving the page)
+  async function flushAll() {
+    await Promise.all(Object.keys(pending.value).map(flushLine));
+    await queue;
+  }
+
+  async function fetchActiveOrder() {
+    try {
+      const data = await getClient().request(GET_ACTIVE_ORDER);
+      order.value = data.activeOrder || null;
+    } catch {
+      'fetchActiveOrder failed:', err?.response?.errors || err
+    }
+  }
+
+  // ── Guest -> Vendure merge (call right after login succeeds) ──
+  async function mergeGuestCart() {
+    loadGuest();
+    await fetchActiveOrder(); // reuse the existing active order if there is one
+    mergeIssues.value = [];
+
+    // Sequential on purpose: concurrent mutations on one order can race
+    for (const item of [...guestItems.value]) {
+      try {
+        const res = (await getClient().request(ADD_ITEM_TO_ORDER, {
+          variantId: item.variantId,
+          quantity: item.quantity, // addItemToOrder accumulates onto an existing line
+        })).addItemToOrder;
+        applyResult(res);
+        if (res?.errorCode) mergeIssues.value.push({ name: item.name, reason: res.message || res.errorCode });
+        error.value = null;
+        // Success or a definitive rejection: either way, don't retry this line
+        guestItems.value = guestItems.value.filter((i) => i.variantId !== item.variantId);
+      } catch {
+        break; // network failure: keep the remaining guest lines for the next attempt
+      }
+    }
+  }
+
+  async function reset() {
+    await flushAll();
+    timers.forEach(clearTimeout);
+    timers.clear();
+    order.value = null;
+    pending.value = {};
+    error.value = null;
+  }
+
+  async function init() {
+    loadGuest();
+    if (isAuthed()) await fetchActiveOrder();
+  }
+
+  return {
+    guestItems, order, pending, error, mergeIssues, isPanelOpen,
+    items, itemCount, subtotal, currencyCode,
+    add, remove, setQuantity, flushAll, fetchActiveOrder, mergeGuestCart, reset, init,
+  };
+});
+</file>
+
+<file path="app/store/checkout.js">
+import { defineStore } from 'pinia';
+import { ref } from 'vue';
+import { getClient } from '~/api/client';
+import {
+  SET_ORDER_SHIPPING_ADDRESS,
+  SET_ORDER_BILLING_ADDRESS,
+  SET_ORDER_SHIPPING_METHOD,
+  APPLY_COUPON_CODE,
+  REMOVE_COUPON_CODE,
+  TRANSITION_ORDER_TO_STATE,
+  CREATE_CUSTOMER_ADDRESS,
+} from '~/api/mutations';
+import { GET_CHECKOUT_CUSTOMER, GET_ELIGIBLE_SHIPPING_METHODS } from '~/api/queries';
+import { useCartStore } from '~/store/cart';
+
+function createEmptyAddress() {
+  return {
+    fullName: '',
+    phoneNumber: '',
+    streetLine1: '',
+    streetLine2: '',
+    city: '',
+    province: '',
+    postalCode: '',
+    countryCode: 'IN',
+  };
+}
+
+// Turns a saved Vendure address into the shape the form uses
+function addressFromSaved(saved) {
+  return {
+    fullName: saved.fullName || '',
+    phoneNumber: saved.phoneNumber || '',
+    streetLine1: saved.streetLine1 || '',
+    streetLine2: saved.streetLine2 || '',
+    city: saved.city || '',
+    province: saved.province || '',
+    postalCode: saved.postalCode || '',
+    countryCode: saved.country?.code || 'IN',
+  };
+}
+
+// Turns an address stored on the order into the shape the form uses
+function addressFromOrder(orderAddress) {
+  return {
+    fullName: orderAddress.fullName || '',
+    phoneNumber: orderAddress.phoneNumber || '',
+    streetLine1: orderAddress.streetLine1 || '',
+    streetLine2: orderAddress.streetLine2 || '',
+    city: orderAddress.city || '',
+    province: orderAddress.province || '',
+    postalCode: orderAddress.postalCode || '',
+    countryCode: orderAddress.countryCode || 'IN',
+  };
+}
+
+// Only the fields Vendure accepts, with whitespace trimmed
+function toAddressInput(address) {
+  return {
+    fullName: address.fullName.trim(),
+    phoneNumber: address.phoneNumber.trim(),
+    streetLine1: address.streetLine1.trim(),
+    streetLine2: address.streetLine2.trim(),
+    city: address.city.trim(),
+    province: address.province.trim(),
+    postalCode: address.postalCode.trim(),
+    countryCode: address.countryCode,
+  };
+}
+
+// A comparable string, so two addresses with the same content match
+function addressKey(address) {
+  return [
+    address.fullName,
+    address.phoneNumber,
+    address.streetLine1,
+    address.streetLine2,
+    address.city,
+    address.province,
+    address.postalCode,
+    address.countryCode,
+  ]
+    .map((value) => String(value || '').trim().toLowerCase())
+    .join('|');
+}
+
+// Returns an error message, or an empty string when the address is fine
+function validateAddress(address) {
+  if (!address.fullName.trim()) return 'Please enter the full name.';
+  if (!/^\d{10}$/.test(address.phoneNumber.trim())) return 'Phone number must be 10 digits.';
+  if (!address.streetLine1.trim()) return 'Please enter the street address.';
+  if (!address.city.trim()) return 'Please enter the city.';
+  if (!address.province.trim()) return 'Please enter the state.';
+  if (!/^\d{6}$/.test(address.postalCode.trim())) return 'Pincode must be 6 digits.';
+  return '';
+}
+
+function readError(err) {
+  return err?.response?.errors?.[0]?.message || err.message || 'Something went wrong';
+}
+
+export const useCheckoutStore = defineStore('checkout', () => {
+  const cart = useCartStore();
+
+  // ── State ──
+  const shippingAddress = ref(createEmptyAddress());
+  const billingAddress = ref(createEmptyAddress());
+  const billingSameAsShipping = ref(true);
+
+  // Addresses saved on the customer account: [{ id, ...address fields }]
+  const savedAddresses = ref([]);
+
+  // Consent: only save an address when the customer ticks the box
+  const saveShipping = ref(false);
+  const saveBilling = ref(false);
+
+  const couponInput = ref('');
+  const couponError = ref('');
+  const loading = ref(false);
+  const error = ref('');
+
+  const shippingMethods = ref([]);
+  const selectedShippingMethodId = ref(null);
+  const shippingChecked = ref(false); // true once Vendure has told us which methods are eligible
+
+  // ── Helpers ──
+  function resetForm() {
+    shippingAddress.value = createEmptyAddress();
+    billingAddress.value = createEmptyAddress();
+    billingSameAsShipping.value = true;
+    savedAddresses.value = [];
+    saveShipping.value = false;
+    saveBilling.value = false;
+    couponInput.value = '';
+    couponError.value = '';
+    shippingMethods.value = [];
+    selectedShippingMethodId.value = null;
+    shippingChecked.value = false;
+  }
+
+  // Runs an order mutation and stores the updated order in the cart store.
+  // Returns true on success, false if Vendure answered with an error.
+  async function runOrderMutation(mutation, variables, resultKey) {
+    const data = await getClient().request(mutation, variables);
+    const result = data[resultKey];
+
+    if (result?.errorCode) {
+      error.value = result.message;
+      return false;
+    }
+
+    cart.order = result;
+    return true;
+  }
+
+  // ── Saved address cards ──
+  // The id of the saved address that matches this form, or null when it is a new address
+  function matchingSavedId(address) {
+    const key = addressKey(address);
+    return savedAddresses.value.find((saved) => addressKey(saved) === key)?.id || null;
+  }
+
+  // Fills the shipping or billing form from a saved card
+  function selectSavedAddress(target, saved) {
+    const { id, ...fields } = saved;
+    if (target === 'shipping') {
+      shippingAddress.value = { ...fields };
+      saveShipping.value = false;
+    } else {
+      billingAddress.value = { ...fields };
+      saveBilling.value = false;
+    }
+  }
+
+  // Clears the shipping or billing form for a brand new address
+  function startNewAddress(target) {
+    if (target === 'shipping') {
+      shippingAddress.value = createEmptyAddress();
+    } else {
+      billingAddress.value = createEmptyAddress();
+    }
+  }
+
+  // ── Loading the page ──
+  async function prefillForm() {
+    const data = await getClient().request(GET_CHECKOUT_CUSTOMER);
+    const customer = data.activeCustomer;
+    if (!customer) return;
+
+    savedAddresses.value = customer.addresses.map((saved) => ({
+      id: saved.id,
+      ...addressFromSaved(saved),
+    }));
+
+    // Returning from payment: the order already has the addresses
+    const orderShipping = cart.order?.shippingAddress;
+    const orderBilling = cart.order?.billingAddress;
+
+    if (orderShipping?.streetLine1) {
+      shippingAddress.value = addressFromOrder(orderShipping);
+    } else {
+      // First visit: start from the customer's name and phone only
+      shippingAddress.value.fullName = `${customer.firstName} ${customer.lastName}`.trim();
+      shippingAddress.value.phoneNumber = customer.phoneNumber || '';
+    }
+
+    if (orderBilling?.streetLine1) {
+      const billing = addressFromOrder(orderBilling);
+      if (addressKey(billing) !== addressKey(shippingAddress.value)) {
+        billingAddress.value = billing;
+        billingSameAsShipping.value = false;
+      }
+    }
+  }
+
+  async function load() {
+    loading.value = true;
+    error.value = '';
+    resetForm();
+
+    try {
+      await cart.flushAll();
+      await cart.fetchActiveOrder();
+
+      // Coming back from the payment page: unlock the order again
+      if (cart.order?.state === 'ArrangingPayment') {
+        await runOrderMutation(TRANSITION_ORDER_TO_STATE, { state: 'AddingItems' }, 'transitionOrderToState');
+      }
+
+      // Returning from payment: remember the method already on the order
+      selectedShippingMethodId.value = cart.order?.shippingLines?.[0]?.shippingMethod?.id || null;
+
+      await prefillForm();
+    } catch (err) {
+      error.value = readError(err);
+    } finally {
+      loading.value = false;
+    }
+  }
+
+  // ── Shipping ──
+  function setShippingMethod(id) {
+    return runOrderMutation(
+      SET_ORDER_SHIPPING_METHOD,
+      { shippingMethodId: [id] },
+      'setOrderShippingMethod'
+    );
+  }
+
+  // Called when the customer picks one from the list
+  async function chooseShippingMethod(id) {
+    error.value = '';
+    selectedShippingMethodId.value = id;
+
+    try {
+      await setShippingMethod(id);
+    } catch (err) {
+      error.value = readError(err);
+    }
+  }
+
+  // Returns true when shipping is settled and checkout can continue
+  async function resolveShipping() {
+    const data = await getClient().request(GET_ELIGIBLE_SHIPPING_METHODS);
+    shippingMethods.value = data.eligibleShippingMethods;
+    shippingChecked.value = true;
+
+    const methods = shippingMethods.value;
+
+    // No methods: shipping is free, nothing to set
+    if (methods.length === 0) {
+      selectedShippingMethodId.value = null;
+      return true;
+    }
+
+    // One method: use it
+    if (methods.length === 1) {
+      selectedShippingMethodId.value = methods[0].id;
+      return setShippingMethod(methods[0].id);
+    }
+
+    // Several methods: the customer must choose
+    const choiceIsValid = methods.some((m) => m.id === selectedShippingMethodId.value);
+    if (!choiceIsValid) {
+      selectedShippingMethodId.value = null;
+      error.value = 'Please choose a shipping method.';
+      return false;
+    }
+
+    return setShippingMethod(selectedShippingMethodId.value);
+  }
+
+  // ── Saving addresses (only with consent) ──
+  // Saving is a convenience: if it fails, checkout still continues
+  async function saveAddresses() {
+    try {
+      const toSave = [];
+      if (saveShipping.value) toSave.push(shippingAddress.value);
+      if (!billingSameAsShipping.value && saveBilling.value) toSave.push(billingAddress.value);
+
+      const knownKeys = new Set(savedAddresses.value.map(addressKey));
+
+      for (const address of toSave) {
+        const key = addressKey(address);
+        if (knownKeys.has(key)) continue; // already saved, don't duplicate
+
+        const input = toAddressInput(address);
+        const data = await getClient().request(CREATE_CUSTOMER_ADDRESS, { input });
+
+        savedAddresses.value.push({ id: data.createCustomerAddress.id, ...input });
+        knownKeys.add(key);
+      }
+
+      saveShipping.value = false;
+      saveBilling.value = false;
+    } catch (err) {
+      console.warn('Could not save the address', err);
+    }
+  }
+
+  // ── Submitting step 1 ──
+  // Returns true when the order is ready for the payment page
+  async function submitCustomerInfo() {
+    error.value = '';
+
+    const shippingProblem = validateAddress(shippingAddress.value);
+    if (shippingProblem) {
+      error.value = shippingProblem;
+      return false;
+    }
+
+    if (!billingSameAsShipping.value) {
+      const billingProblem = validateAddress(billingAddress.value);
+      if (billingProblem) {
+        error.value = `Billing address: ${billingProblem}`;
+        return false;
+      }
+    }
+
+    loading.value = true;
+
+    try {
+      const billing = billingSameAsShipping.value ? shippingAddress.value : billingAddress.value;
+
+      const shippingAddressSet = await runOrderMutation(
+        SET_ORDER_SHIPPING_ADDRESS,
+        { input: toAddressInput(shippingAddress.value) },
+        'setOrderShippingAddress'
+      );
+      if (!shippingAddressSet) return false;
+
+      const billingAddressSet = await runOrderMutation(
+        SET_ORDER_BILLING_ADDRESS,
+        { input: toAddressInput(billing) },
+        'setOrderBillingAddress'
+      );
+      if (!billingAddressSet) return false;
+
+      const shippingMethodSet = await resolveShipping();
+      if (!shippingMethodSet) return false;
+
+      await saveAddresses();
+      return true;
+    } catch (err) {
+      error.value = readError(err);
+      return false;
+    } finally {
+      loading.value = false;
+    }
+  }
+
+  // ── Coupons ──
+  async function applyCoupon() {
+    const code = couponInput.value.trim();
+    if (!code) return;
+
+    couponError.value = '';
+
+    try {
+      const data = await getClient().request(APPLY_COUPON_CODE, { couponCode: code });
+      const result = data.applyCouponCode;
+
+      if (result.errorCode) {
+        couponError.value = result.message;
+        return;
+      }
+
+      cart.order = result;
+      couponInput.value = '';
+    } catch (err) {
+      couponError.value = readError(err);
+    }
+  }
+
+  async function removeCoupon(code) {
+    couponError.value = '';
+
+    try {
+      const data = await getClient().request(REMOVE_COUPON_CODE, { couponCode: code });
+      if (data.removeCouponCode) {
+        cart.order = data.removeCouponCode;
+      }
+    } catch (err) {
+      couponError.value = readError(err);
+    }
+  }
+
+  return {
+    shippingAddress,
+    billingAddress,
+    billingSameAsShipping,
+    savedAddresses,
+    saveShipping,
+    saveBilling,
+    couponInput,
+    couponError,
+    loading,
+    error,
+    shippingMethods,
+    selectedShippingMethodId,
+    shippingChecked,
+    load,
+    matchingSavedId,
+    selectSavedAddress,
+    startNewAddress,
+    submitCustomerInfo,
+    chooseShippingMethod,
+    applyCoupon,
+    removeCoupon,
   };
 });
 </file>
@@ -4588,6 +6141,268 @@ export function buildBreadcrumbs(col: any): { name: string; path: string }[] {
 }
 </file>
 
+<file path="tests/store/cart.test.js">
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { setActivePinia, createPinia } from 'pinia';
+import { useCartStore } from '~/store/cart';
+import { useAuthStore } from '~/store/auth';
+import { ADJUST_ORDER_LINE, ADD_ITEM_TO_ORDER } from '~/api/mutations';
+import { GET_ACTIVE_ORDER } from '~/api/queries';
+
+// Replace the real GraphQL client with a fake one
+const request = vi.fn();
+vi.mock('~/api/client', () => ({
+  getClient: () => ({ request }),
+}));
+
+const teeSnapshot = {
+  variantId: 'V1',
+  name: 'Blue Tee',
+  image: '',
+  options: ['M'],
+  path: '/men/tee/blue-tee',
+  unitPrice: 49900,
+  currencyCode: 'INR',
+};
+
+function makeOrder(quantity) {
+  return {
+    id: 'O1',
+    currencyCode: 'INR',
+    lines: [
+      {
+        id: 'L1',
+        quantity,
+        unitPriceWithTax: 49900,
+        featuredAsset: null,
+        productVariant: {
+          id: 'V1',
+          name: 'Blue Tee M',
+          options: [{ code: 'm', name: 'M' }],
+          product: { slug: 'blue-tee', name: 'Blue Tee' },
+        },
+      },
+    ],
+  };
+}
+
+let cart;
+let auth;
+
+beforeEach(() => {
+  setActivePinia(createPinia());
+  localStorage.clear();
+  request.mockReset();
+  cart = useCartStore();
+  auth = useAuthStore();
+});
+
+afterEach(() => {
+  vi.useRealTimers();
+});
+
+describe('guest cart', () => {
+  it('adds an item and accumulates quantity for the same variant', () => {
+    cart.add(teeSnapshot);
+    cart.add(teeSnapshot, 2);
+
+    expect(cart.items).toHaveLength(1);
+    expect(cart.itemCount).toBe(3);
+  });
+
+  it('removes the item when quantity is set to 0', () => {
+    cart.add(teeSnapshot);
+    cart.setQuantity('V1', 0);
+
+    expect(cart.items).toHaveLength(0);
+  });
+
+  it('never calls the Vendure API', () => {
+    cart.add(teeSnapshot);
+    expect(request).not.toHaveBeenCalled();
+  });
+});
+
+describe('logged-in cart', () => {
+  it('sends only one request for rapid quantity changes', async () => {
+    vi.useFakeTimers();
+    auth.isAuthenticated = true;
+    cart.order = makeOrder(1);
+    request.mockResolvedValue({ adjustOrderLine: makeOrder(5) });
+
+    cart.setQuantity('V1', 2);
+    cart.setQuantity('V1', 3);
+    cart.setQuantity('V1', 5);
+    await vi.advanceTimersByTimeAsync(600);
+
+    expect(request).toHaveBeenCalledTimes(1);
+    expect(request).toHaveBeenCalledWith(ADJUST_ORDER_LINE, { lineId: 'L1', quantity: 5 });
+  });
+
+  it('shows the new quantity immediately, before the server answers', () => {
+    auth.isAuthenticated = true;
+    cart.order = makeOrder(1);
+
+    cart.setQuantity('V1', 4);
+
+    expect(cart.items[0].quantity).toBe(4);
+  });
+});
+
+describe('merge on login', () => {
+  it('adds guest items to the Vendure order and empties the guest cart', async () => {
+    auth.isAuthenticated = true;
+    localStorage.setItem('badmos-guest-cart', JSON.stringify([{ ...teeSnapshot, quantity: 2 }]));
+
+    request.mockImplementation(async (query) => {
+      if (query === GET_ACTIVE_ORDER) return { activeOrder: null };
+      return { addItemToOrder: makeOrder(2) };
+    });
+
+    await cart.mergeGuestCart();
+
+    expect(request).toHaveBeenCalledWith(ADD_ITEM_TO_ORDER, { variantId: 'V1', quantity: 2 });
+    expect(cart.guestItems).toHaveLength(0);
+    expect(cart.items[0].quantity).toBe(2);
+  });
+    it('records a rejected line in mergeIssues and still empties the guest cart', async () => {
+    auth.isAuthenticated = true;
+    localStorage.setItem('badmos-guest-cart', JSON.stringify([{ ...teeSnapshot, quantity: 2 }]));
+
+    request.mockImplementation(async (query) => {
+      if (query === GET_ACTIVE_ORDER) return { activeOrder: null };
+      return {
+        addItemToOrder: { errorCode: 'INSUFFICIENT_STOCK_ERROR', message: 'Not enough stock' },
+      };
+    });
+
+    await cart.mergeGuestCart();
+
+    expect(cart.mergeIssues).toHaveLength(1);
+    expect(cart.mergeIssues[0].name).toBe('Blue Tee');
+    expect(cart.guestItems).toHaveLength(0);
+  });
+
+  it('keeps guest items for a retry when the network fails', async () => {
+    auth.isAuthenticated = true;
+    localStorage.setItem('badmos-guest-cart', JSON.stringify([{ ...teeSnapshot, quantity: 2 }]));
+
+    request.mockImplementation(async (query) => {
+      if (query === GET_ACTIVE_ORDER) return { activeOrder: null };
+      throw new Error('Network down');
+    });
+
+    await cart.mergeGuestCart();
+
+    expect(cart.guestItems).toHaveLength(1);
+  });
+});
+</file>
+
+<file path="tests/store/productPath.test.js">
+import { describe, it, expect } from 'vitest';
+import {
+  crumbSlugs,
+  buildProductPath,
+  buildCollectionPath,
+  buildBreadcrumbs,
+} from '~~/server/utils/productPath';
+
+const teeCollection = {
+  breadcrumbs: [
+    { name: 'root', slug: '__root_collection__' },
+    { name: 'Shop by category', slug: 'shop-by-category' },
+    { name: 'Men', slug: 'men' },
+    { name: 'Tee', slug: 'tee' },
+  ],
+};
+
+const menCollection = {
+  breadcrumbs: [
+    { name: 'root', slug: '__root_collection__' },
+    { name: 'Shop by category', slug: 'shop-by-category' },
+    { name: 'Men', slug: 'men' },
+  ],
+};
+
+describe('crumbSlugs', () => {
+  it('drops the root collection and hidden container collections', () => {
+    expect(crumbSlugs(teeCollection)).toEqual(['men', 'tee']);
+  });
+
+  it('returns an empty list when there are no breadcrumbs', () => {
+    expect(crumbSlugs({})).toEqual([]);
+  });
+});
+
+describe('buildProductPath', () => {
+  it('uses the deepest collection for the product URL', () => {
+    const path = buildProductPath([menCollection, teeCollection], 'blue-tee');
+    expect(path).toBe('/men/tee/blue-tee');
+  });
+
+  it('falls back to the bare slug when the product has no collections', () => {
+    expect(buildProductPath([], 'blue-tee')).toBe('/blue-tee');
+  });
+});
+
+describe('buildCollectionPath', () => {
+  it('joins the visible breadcrumb slugs', () => {
+    expect(buildCollectionPath(teeCollection)).toBe('/men/tee');
+  });
+});
+
+describe('buildBreadcrumbs', () => {
+  it('returns name and cumulative path for each visible level', () => {
+    expect(buildBreadcrumbs(teeCollection)).toEqual([
+      { name: 'Men', path: '/men' },
+      { name: 'Tee', path: '/men/tee' },
+    ]);
+  });
+});
+</file>
+
+<file path="tests/store/usePriceFormatter.test.js">
+import { describe, it, expect, vi } from 'vitest';
+import { usePriceFormatter } from '~/composables/usePriceFormatter';
+
+// Keep the real vue-i18n (the app's i18n plugin needs createI18n)
+// and replace only useI18n with a fake that returns the locale
+vi.mock('vue-i18n', async (importOriginal) => {
+  const actual = await importOriginal();
+  return {
+    ...actual,
+    useI18n: () => ({ t: () => 'en-IN' }),
+  };
+});
+
+describe('usePriceFormatter', () => {
+  const { formatPrice } = usePriceFormatter();
+
+  it('converts minor units to a formatted currency string', () => {
+    expect(formatPrice(49900, 'INR')).toContain('499.00');
+  });
+
+  it('defaults to INR when no currency code is given', () => {
+    expect(formatPrice(49900)).toContain('499.00');
+  });
+
+  it('returns an empty string for missing amounts', () => {
+    expect(formatPrice(null, 'INR')).toBe('');
+    expect(formatPrice(undefined, 'INR')).toBe('');
+    expect(formatPrice('', 'INR')).toBe('');
+  });
+
+  it('returns the original value when the amount is not a number', () => {
+    expect(formatPrice('abc', 'INR')).toBe('abc');
+  });
+
+  it('uses the plain fallback format for an invalid currency code', () => {
+    expect(formatPrice(49900, 'AB')).toBe('AB 499.00');
+  });
+});
+</file>
+
 <file path=".gitignore">
 # Nuxt dev/build outputs
 .output
@@ -4615,6 +6430,10 @@ logs
 !.env.example
 </file>
 
+<file path=".nuxtrc">
+setups.@nuxt/test-utils="4.3.4"
+</file>
+
 <file path="development.env">
 NUXT_PUBLIC_API_URL=localhost
 </file>
@@ -4635,7 +6454,10 @@ export default defineNuxtConfig({
   routeRules: {
     '/uploads/**': {
       proxy: `${process.env.NUXT_PUBLIC_STRAPI_BASE_URL || 'http://127.0.0.1:1337'}/uploads/**`
-    }
+    },
+    '/checkout': { ssr: false},
+    '/checkout/**': { ssr: false},
+    '/order/**': { ssr: false},
   },
   gtag: {
     id: process.env.NUXT_GTAG_ID || 'G-XXXXXXXXXX' // Replace with your actual Measurement ID
@@ -4653,7 +6475,9 @@ export default defineNuxtConfig({
     "dev": "nuxt dev",
     "generate": "nuxt generate",
     "preview": "nuxt preview",
-    "postinstall": "nuxt prepare"
+    "postinstall": "nuxt prepare",
+    "test": "vitest",
+    "test:run": "vitest run"
   },
   "dependencies": {
     "@nuxt/icon": "^2.5.1",
@@ -4668,6 +6492,12 @@ export default defineNuxtConfig({
     "vue": "^3.5.41",
     "vue-i18n": "^11.4.10",
     "vue-router": "^5.2.0"
+  },
+  "devDependencies": {
+    "@nuxt/test-utils": "^4.3.4",
+    "@vue/test-utils": "^2.5.1",
+    "happy-dom": "^21.0.4",
+    "vitest": "^5.0.5"
   }
 }
 </file>
@@ -4769,6 +6599,16 @@ Check out the [deployment documentation](https://nuxt.com/docs/getting-started/d
     }
   ]
 }
+</file>
+
+<file path="vitest.config.ts">
+import { defineVitestConfig } from '@nuxt/test-utils/config';
+
+export default defineVitestConfig({
+    test: {
+        environment: 'nuxt',
+    },
+});
 </file>
 
 </files>

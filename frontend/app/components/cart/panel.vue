@@ -18,6 +18,12 @@ function decrease(item) {
 function removeItem(item) {
   cart.remove(item.variantId);
 }
+
+async function goToCheckout() {
+  await cart.flushAll();   // send pending quantity edits first
+  emit('toggleMenu');      // close the panel
+  await navigateTo('/checkout');
+}
 </script>
 
 <template>
@@ -70,6 +76,9 @@ function removeItem(item) {
     <div v-if="cart.items.length" class="py-4 border-t-2 border-black flex justify-between font-bold">
       <span>Subtotal</span>
       <span>{{ formatPrice(cart.subtotal, cart.currencyCode) }}</span>
+    </div>
+    <div v-if="cart.items.length" class="py-4 border-t-2 border-black flex justify-between font-bold">
+      <UiButton text="Checkout" content-classes="w-full" @click="goToCheckout" />
     </div>
   </div>
 </template>

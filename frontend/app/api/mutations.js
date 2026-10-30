@@ -73,3 +73,93 @@ export const REMOVE_ORDER_LINE = gql`
   ${CART_FRAGMENT}
 `;
 
+export const SET_ORDER_SHIPPING_ADDRESS = gql`
+  mutation SetOrderShippingAddress($input: CreateAddressInput!) {
+    setOrderShippingAddress(input: $input) {
+      ...Cart
+      ... on ErrorResult {
+        errorCode
+        message
+      }
+    }
+  }
+  ${CART_FRAGMENT}
+`;
+
+export const SET_ORDER_BILLING_ADDRESS = gql`
+  mutation SetOrderBillingAddress($input: CreateAddressInput!) {
+    setOrderBillingAddress(input: $input) {
+      ...Cart
+      ... on ErrorResult {
+        errorCode
+        message
+      }
+    }
+  }
+  ${CART_FRAGMENT}
+`;
+
+export const SET_ORDER_SHIPPING_METHOD = gql`
+  mutation SetOrderShippingMethod($shippingMethodId: [ID!]!) {
+    setOrderShippingMethod(shippingMethodId: $shippingMethodId) {
+      ...Cart
+      ... on ErrorResult {
+        errorCode
+        message
+      }
+    }
+  }
+  ${CART_FRAGMENT}
+`;
+
+export const APPLY_COUPON_CODE = gql`
+  mutation ApplyCouponCode($couponCode: String!) {
+    applyCouponCode(couponCode: $couponCode) {
+      ...Cart
+      ... on ErrorResult {
+        errorCode
+        message
+      }
+    }
+  }
+  ${CART_FRAGMENT}
+`;
+
+export const REMOVE_COUPON_CODE = gql`
+  mutation RemoveCouponCode($couponCode: String!) {
+    removeCouponCode(couponCode: $couponCode) {
+      ...Cart
+    }
+  }
+  ${CART_FRAGMENT}
+`;
+
+export const TRANSITION_ORDER_TO_STATE = gql`
+  mutation TransitionOrderToState($state: String!) {
+    transitionOrderToState(state: $state) {
+      ...Cart
+      ... on ErrorResult {
+        errorCode
+        message
+      }
+    }
+  }
+  ${CART_FRAGMENT}
+`;
+
+export const CREATE_CUSTOMER_ADDRESS = gql`
+  mutation CreateCustomerAddress($input: CreateAddressInput!) {
+    createCustomerAddress(input: $input) {
+      id
+    }
+  }
+`;
+
+export const UPDATE_CUSTOMER_ADDRESS = gql`
+  mutation UpdateCustomerAddress($input: UpdateAddressInput!) {
+    updateCustomerAddress(input: $input) {
+      id
+    }
+  }
+`;
+
